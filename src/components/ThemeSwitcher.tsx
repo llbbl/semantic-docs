@@ -3,8 +3,8 @@
  * Allows users to switch between different color themes
  */
 
-import { useState, useEffect } from 'react';
-import { themes, defaultTheme, type Theme } from '../config/themes';
+import { useEffect, useState } from 'react';
+import { defaultTheme, type Theme, themes } from '../config/themes';
 
 export default function ThemeSwitcher() {
   const [currentTheme, setCurrentTheme] = useState(defaultTheme);
@@ -15,10 +15,10 @@ export default function ThemeSwitcher() {
     const savedTheme = localStorage.getItem('theme') || defaultTheme;
     setCurrentTheme(savedTheme);
     applyTheme(savedTheme);
-  }, []);
+  }, [applyTheme]);
 
   const applyTheme = (themeName: string) => {
-    const theme = themes.find(t => t.name === themeName);
+    const theme = themes.find((t) => t.name === themeName);
     if (!theme) return;
 
     const root = document.documentElement;
@@ -36,7 +36,8 @@ export default function ThemeSwitcher() {
     setIsOpen(false);
   };
 
-  const currentThemeLabel = themes.find(t => t.name === currentTheme)?.label || 'Theme';
+  const currentThemeLabel =
+    themes.find((t) => t.name === currentTheme)?.label || 'Theme';
 
   return (
     <div className="relative">
@@ -78,9 +79,10 @@ export default function ThemeSwitcher() {
                   onClick={() => handleThemeChange(theme.name)}
                   className={`
                     w-full text-left px-3 py-2 text-sm rounded transition-colors
-                    ${currentTheme === theme.name
-                      ? 'bg-accent text-accent-foreground font-medium'
-                      : 'hover:bg-accent/50 text-foreground'
+                    ${
+                      currentTheme === theme.name
+                        ? 'bg-accent text-accent-foreground font-medium'
+                        : 'hover:bg-accent/50 text-foreground'
                     }
                   `}
                 >

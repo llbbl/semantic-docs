@@ -63,3 +63,6 @@ jobs:
 
       - name: Check TypeScript
         run: pnpm exec tsc --noEmit
+
+      - name: Run Biome linter
+        run: pnpm lint

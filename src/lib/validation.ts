@@ -12,7 +12,9 @@ export function isValidSearchQuery(query: unknown): query is string {
 /**
  * Validate embedding provider
  */
-export function isValidEmbeddingProvider(provider: unknown): provider is 'local' | 'gemini' | 'openai' {
+export function isValidEmbeddingProvider(
+  provider: unknown,
+): provider is 'local' | 'gemini' | 'openai' {
   return provider === 'local' || provider === 'gemini' || provider === 'openai';
 }
 
@@ -35,7 +37,9 @@ export interface EnvironmentConfig {
   OPENAI_API_KEY?: string;
 }
 
-export function validateEnvironment(env: Record<string, string | undefined>): EnvironmentConfig {
+export function validateEnvironment(
+  env: Record<string, string | undefined>,
+): EnvironmentConfig {
   if (!env.TURSO_DB_URL) {
     throw new Error('TURSO_DB_URL is required');
   }
@@ -46,7 +50,9 @@ export function validateEnvironment(env: Record<string, string | undefined>): En
 
   const provider = env.EMBEDDING_PROVIDER || 'local';
   if (!isValidEmbeddingProvider(provider)) {
-    throw new Error(`Invalid EMBEDDING_PROVIDER: ${provider}. Must be 'local', 'gemini', or 'openai'`);
+    throw new Error(
+      `Invalid EMBEDDING_PROVIDER: ${provider}. Must be 'local', 'gemini', or 'openai'`,
+    );
   }
 
   if (provider === 'gemini' && !env.GEMINI_API_KEY) {

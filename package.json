@@ -32,7 +32,10 @@
     "index:local": "tsx scripts/index-content.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write ."
   },
   "dependencies": {
     "@astrojs/node": "^9.5.0",
@@ -48,6 +51,7 @@
     "tailwindcss": "^4.1.14"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.2.6",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20.19.21",

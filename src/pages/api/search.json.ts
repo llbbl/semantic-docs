@@ -3,10 +3,13 @@
  * Uses libsql-search for semantic search
  */
 
-import type { APIRoute } from 'astro';
 import { search } from '@logan/libsql-search';
+import type { APIRoute } from 'astro';
 import { getTursoClient } from '../../lib/turso';
-import { checkRateLimit, createRateLimitHeaders } from '../../middleware/rateLimit';
+import {
+  checkRateLimit,
+  createRateLimitHeaders,
+} from '../../middleware/rateLimit';
 
 export const prerender = false;
 
@@ -14,12 +17,12 @@ export const POST: APIRoute = async ({ request }) => {
   // Rate limiting: 20 requests per minute per IP
   const rateLimitResult = checkRateLimit(request, {
     maxRequests: 20,
-    windowSeconds: 60
+    windowSeconds: 60,
   });
 
   const rateLimitHeaders = {
     'Content-Type': 'application/json',
-    ...createRateLimitHeaders(rateLimitResult)
+    ...createRateLimitHeaders(rateLimitResult),
   };
 
   if (!rateLimitResult.allowed) {
@@ -27,15 +30,17 @@ export const POST: APIRoute = async ({ request }) => {
       JSON.stringify({
         error: 'Too many requests',
         message: 'Rate limit exceeded. Please try again later.',
-        retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+        retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000),
       }),
       {
         status: 429,
         headers: {
           ...rateLimitHeaders,
-          'Retry-After': Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000).toString()
-        }
-      }
+          'Retry-After': Math.ceil(
+            (rateLimitResult.resetTime - Date.now()) / 1000,
+          ).toString(),
+        },
+      },
     );
   }
 
@@ -46,7 +51,7 @@ export const POST: APIRoute = async ({ request }) => {
     if (!query || typeof query !== 'string') {
       return new Response(
         JSON.stringify({ error: 'Query parameter is required' }),
-        { status: 400, headers: rateLimitHeaders }
+        { status: 400, headers: rateLimitHeaders },
       );
     }
 
@@ -55,9 +60,9 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(
         JSON.stringify({
           error: 'Query too long',
-          message: 'Query must be less than 500 characters'
+          message: 'Query must be less than 500 characters',
         }),
-        { status: 400, headers: rateLimitHeaders }
+        { status: 400, headers: rateLimitHeaders },
       );
     }
 
@@ -72,41 +77,42 @@ export const POST: APIRoute = async ({ request }) => {
       query,
       limit: sanitizedLimit,
       embeddingOptions: {
-        provider: (process.env.EMBEDDING_PROVIDER as 'local' | 'gemini' | 'openai') || 'local'
-      }
+        provider:
+          (process.env.EMBEDDING_PROVIDER as 'local' | 'gemini' | 'openai') ||
+          'local',
+      },
     });
 
     return new Response(
       JSON.stringify({
         results,
         count: results.length,
-        query
+        query,
       }),
       {
         status: 200,
-        headers: rateLimitHeaders
-      }
+        headers: rateLimitHeaders,
+      },
     );
-
   } catch (error) {
     console.error('Search error:', error);
 
     return new Response(
       JSON.stringify({
         error: 'Search failed',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
       }),
       {
         status: 500,
-        headers: rateLimitHeaders
-      }
+        headers: rateLimitHeaders,
+      },
     );
   }
 };
 
 export const GET: APIRoute = async () => {
-  return new Response(
-    JSON.stringify({ error: 'Use POST method for search' }),
-    { status: 405, headers: { 'Content-Type': 'application/json' } }
-  );
+  return new Response(JSON.stringify({ error: 'Use POST method for search' }), {
+    status: 405,
+    headers: { 'Content-Type': 'application/json' },
+  });
 };

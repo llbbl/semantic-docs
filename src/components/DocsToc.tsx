@@ -17,14 +17,18 @@ export default function DocsToc() {
 
   useEffect(() => {
     // Extract headings from the page
-    const article = document.querySelector('article') || document.querySelector('main');
+    const article =
+      document.querySelector('article') || document.querySelector('main');
     if (!article) return;
 
     const headings = article.querySelectorAll('h2, h3');
     const items: TocItem[] = Array.from(headings).map((heading) => ({
-      id: heading.id || heading.textContent?.toLowerCase().replace(/\s+/g, '-') || '',
+      id:
+        heading.id ||
+        heading.textContent?.toLowerCase().replace(/\s+/g, '-') ||
+        '',
       text: heading.textContent || '',
-      level: parseInt(heading.tagName.substring(1))
+      level: parseInt(heading.tagName.substring(1), 10),
     }));
 
     setToc(items);
@@ -38,7 +42,7 @@ export default function DocsToc() {
           }
         });
       },
-      { rootMargin: '-100px 0px -66%' }
+      { rootMargin: '-100px 0px -66%' },
     );
 
     headings.forEach((heading) => observer.observe(heading));
@@ -53,7 +57,9 @@ export default function DocsToc() {
   return (
     <aside className="fixed top-14 right-0 z-30 hidden h-[calc(100vh-3.5rem)] w-64 shrink-0 overflow-y-auto border-l border-toc-border bg-toc xl:block">
       <div className="py-6 px-6">
-        <h4 className="mb-4 text-sm font-semibold text-toc-foreground">On this page</h4>
+        <h4 className="mb-4 text-sm font-semibold text-toc-foreground">
+          On this page
+        </h4>
         <nav>
           <ul className="space-y-2.5">
             {toc.map((item) => (

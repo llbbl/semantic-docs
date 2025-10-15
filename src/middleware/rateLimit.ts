@@ -11,14 +11,17 @@ interface RateLimitEntry {
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
 // Cleanup old entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (now > entry.resetTime) {
-      rateLimitStore.delete(key);
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [key, entry] of rateLimitStore.entries()) {
+      if (now > entry.resetTime) {
+        rateLimitStore.delete(key);
+      }
     }
-  }
-}, 5 * 60 * 1000);
+  },
+  5 * 60 * 1000,
+);
 
 export interface RateLimitConfig {
   /** Maximum requests per window */
@@ -43,7 +46,8 @@ function getClientId(request: Request): string {
   const realIp = request.headers.get('x-real-ip');
   const cfConnectingIp = request.headers.get('cf-connecting-ip');
 
-  const ip = cfConnectingIp || realIp || forwarded?.split(',')[0]?.trim() || 'unknown';
+  const ip =
+    cfConnectingIp || realIp || forwarded?.split(',')[0]?.trim() || 'unknown';
 
   return ip;
 }
@@ -53,7 +57,7 @@ function getClientId(request: Request): string {
  */
 export function checkRateLimit(
   request: Request,
-  config: RateLimitConfig = { maxRequests: 10, windowSeconds: 60 }
+  config: RateLimitConfig = { maxRequests: 10, windowSeconds: 60 },
 ): RateLimitResult {
   const clientId = getClientId(request);
   const now = Date.now();
@@ -65,7 +69,7 @@ export function checkRateLimit(
   if (!entry || now > entry.resetTime) {
     entry = {
       count: 0,
-      resetTime: now + windowMs
+      resetTime: now + windowMs,
     };
     rateLimitStore.set(clientId, entry);
   }
@@ -80,14 +84,16 @@ export function checkRateLimit(
     allowed,
     limit: config.maxRequests,
     remaining,
-    resetTime: entry.resetTime
+    resetTime: entry.resetTime,
   };
 }
 
 /**
  * Create rate limit response headers
  */
-export function createRateLimitHeaders(result: RateLimitResult): Record<string, string> {
+export function createRateLimitHeaders(
+  result: RateLimitResult,
+): Record<string, string> {
   return {
     'X-RateLimit-Limit': result.limit.toString(),
     'X-RateLimit-Remaining': result.remaining.toString(),

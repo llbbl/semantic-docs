@@ -1,10 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  formatFolderName,
-  truncate,
-  slugify,
+  extractHeadings,
   formatDate,
-  extractHeadings
+  formatFolderName,
+  slugify,
+  truncate,
 } from './utils';
 
 describe('formatFolderName', () => {
@@ -110,7 +110,7 @@ describe('extractHeadings', () => {
     expect(headings[0]).toEqual({
       level: 2,
       id: 'intro',
-      text: 'Introduction'
+      text: 'Introduction',
     });
   });
 
@@ -122,7 +122,7 @@ describe('extractHeadings', () => {
     expect(headings[0]).toEqual({
       level: 3,
       id: 'sub-section',
-      text: 'Sub Section'
+      text: 'Sub Section',
     });
   });
 

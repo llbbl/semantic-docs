@@ -4,7 +4,7 @@
  * Real-time vector search using Turso embeddings
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface SearchResult {
   id: number;
@@ -21,8 +21,8 @@ interface SearchProps {
 }
 
 export default function Search({
-  placeholder = "Search articles...",
-  maxResults = 5
+  placeholder = 'Search articles...',
+  maxResults = 5,
 }: SearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -34,62 +34,71 @@ export default function Search({
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   // Debounced search function
-  const performSearch = useCallback(async (searchQuery: string) => {
-    if (searchQuery.length < 2) {
-      setResults([]);
-      setShowResults(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/search.json', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: searchQuery,
-          limit: maxResults
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Search failed');
+  const performSearch = useCallback(
+    async (searchQuery: string) => {
+      if (searchQuery.length < 2) {
+        setResults([]);
+        setShowResults(false);
+        return;
       }
 
-      const data = await response.json();
-      setResults(data.results || []);
-      setShowResults(true);
-    } catch (err) {
-      console.error('Search error:', err);
-      setError('Search failed. Please try again.');
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [maxResults]);
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch('/api/search.json', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: searchQuery,
+            limit: maxResults,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Search failed');
+        }
+
+        const data = await response.json();
+        setResults(data.results || []);
+        setShowResults(true);
+      } catch (err) {
+        console.error('Search error:', err);
+        setError('Search failed. Please try again.');
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [maxResults],
+  );
 
   // Handle input changes with debouncing
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setQuery(value);
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setQuery(value);
 
-    // Clear existing timeout
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
+      // Clear existing timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
 
-    // Set new timeout for debounced search
-    searchTimeoutRef.current = setTimeout(() => {
-      performSearch(value);
-    }, 300);
-  }, [performSearch]);
+      // Set new timeout for debounced search
+      searchTimeoutRef.current = setTimeout(() => {
+        performSearch(value);
+      }, 300);
+    },
+    [performSearch],
+  );
 
   // Handle clicks outside search results
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
         setShowResults(false);
       }
     }
@@ -161,9 +170,7 @@ export default function Search({
       )}
 
       {showResults && query.length >= 2 && results.length === 0 && !loading && (
-        <div className="search-no-results">
-          No results found for "{query}"
-        </div>
+        <div className="search-no-results">No results found for "{query}"</div>
       )}
 
       <style>{`

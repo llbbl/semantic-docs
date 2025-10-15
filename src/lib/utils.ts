@@ -10,7 +10,7 @@ export function formatFolderName(folder: string): string {
   if (folder === 'root') return 'Documentation';
   return folder
     .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 }
 
@@ -19,7 +19,7 @@ export function formatFolderName(folder: string): string {
  */
 export function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength).trim() + '...';
+  return `${text.slice(0, maxLength).trim()}...`;
 }
 
 /**
@@ -42,23 +42,25 @@ export function formatDate(date: string | Date): string {
   return d.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
-    day: 'numeric'
+    day: 'numeric',
   });
 }
 
 /**
  * Extract headings from HTML content for TOC
  */
-export function extractHeadings(html: string): Array<{ id: string; text: string; level: number }> {
+export function extractHeadings(
+  html: string,
+): Array<{ id: string; text: string; level: number }> {
   const headingRegex = /<h([2-3])[^>]*id="([^"]*)"[^>]*>(.*?)<\/h\1>/gi;
   const headings: Array<{ id: string; text: string; level: number }> = [];
 
   let match;
   while ((match = headingRegex.exec(html)) !== null) {
     headings.push({
-      level: parseInt(match[1]),
+      level: parseInt(match[1], 10),
       id: match[2],
-      text: match[3].replace(/<[^>]*>/g, '').trim()
+      text: match[3].replace(/<[^>]*>/g, '').trim(),
     });
   }
 

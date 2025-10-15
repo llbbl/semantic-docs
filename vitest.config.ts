@@ -12,12 +12,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      exclude: [
-        'node_modules/',
-        'dist/',
-        '**/*.config.*',
-        '**/scripts/**',
-      ],
+      exclude: ['node_modules/', 'dist/', '**/*.config.*', '**/scripts/**'],
     },
   },
 });

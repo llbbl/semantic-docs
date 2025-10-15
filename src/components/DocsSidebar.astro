@@ -13,21 +13,24 @@ const currentPath = Astro.url.pathname;
 
 // Fetch all articles and group by folder
 const allArticles = await getAllArticles(client);
-const articlesByFolder = allArticles.reduce((acc, article) => {
-  const folder = article.folder || 'root';
-  if (!acc[folder]) {
-    acc[folder] = [];
-  }
-  acc[folder].push(article);
-  return acc;
-}, {} as Record<string, typeof allArticles>);
+const articlesByFolder = allArticles.reduce(
+  (acc, article) => {
+    const folder = article.folder || 'root';
+    if (!acc[folder]) {
+      acc[folder] = [];
+    }
+    acc[folder].push(article);
+    return acc;
+  },
+  {} as Record<string, typeof allArticles>,
+);
 
 // Format folder names for display
 function formatFolderName(folder: string): string {
   if (folder === 'root') return 'Documentation';
   return folder
     .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 }
 ---

@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { POST, GET } from './search.json';
 import type { SearchResult } from '@logan/libsql-search';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { GET, POST } from './search.json';
 
 // Mock dependencies
 vi.mock('@logan/libsql-search', () => ({
@@ -29,8 +29,8 @@ describe('Search API Route', () => {
           tags: ['test'],
           distance: 0.5,
           content: 'Test content',
-          created_at: '2024-01-01T00:00:00Z'
-        }
+          created_at: '2024-01-01T00:00:00Z',
+        },
       ];
 
       vi.mocked(search).mockResolvedValueOnce(mockResults);
@@ -38,7 +38,7 @@ describe('Search API Route', () => {
       const request = new Request('http://localhost/api/search.json', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: 'test query', limit: 5 })
+        body: JSON.stringify({ query: 'test query', limit: 5 }),
       });
 
       const response = await POST({ request } as any);
@@ -54,7 +54,7 @@ describe('Search API Route', () => {
       const request = new Request('http://localhost/api/search.json', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ limit: 5 })
+        body: JSON.stringify({ limit: 5 }),
       });
 
       const response = await POST({ request } as any);
@@ -68,7 +68,7 @@ describe('Search API Route', () => {
       const request = new Request('http://localhost/api/search.json', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: 123, limit: 5 })
+        body: JSON.stringify({ query: 123, limit: 5 }),
       });
 
       const response = await POST({ request } as any);
@@ -85,7 +85,7 @@ describe('Search API Route', () => {
       const request = new Request('http://localhost/api/search.json', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: 'test' })
+        body: JSON.stringify({ query: 'test' }),
       });
 
       await POST({ request } as any);
@@ -94,17 +94,19 @@ describe('Search API Route', () => {
         expect.objectContaining({
           query: 'test',
           limit: 10,
-        })
+        }),
       );
     });
 
     it('should return 500 on search error', async () => {
-      vi.mocked(search).mockRejectedValueOnce(new Error('Database connection failed'));
+      vi.mocked(search).mockRejectedValueOnce(
+        new Error('Database connection failed'),
+      );
 
       const request = new Request('http://localhost/api/search.json', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: 'test' })
+        body: JSON.stringify({ query: 'test' }),
       });
 
       const response = await POST({ request } as any);
@@ -124,7 +126,7 @@ describe('Search API Route', () => {
       const request = new Request('http://localhost/api/search.json', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: 'test' })
+        body: JSON.stringify({ query: 'test' }),
       });
 
       await POST({ request } as any);
@@ -132,9 +134,9 @@ describe('Search API Route', () => {
       expect(search).toHaveBeenCalledWith(
         expect.objectContaining({
           embeddingOptions: {
-            provider: 'gemini'
-          }
-        })
+            provider: 'gemini',
+          },
+        }),
       );
 
       vi.unstubAllEnvs();

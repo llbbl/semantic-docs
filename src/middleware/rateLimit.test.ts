@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { checkRateLimit, createRateLimitHeaders } from './rateLimit';
 
 describe('checkRateLimit', () => {
@@ -12,10 +12,13 @@ describe('checkRateLimit', () => {
 
   it('should allow requests under the limit', () => {
     const request = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '1.2.3.4' }
+      headers: { 'x-forwarded-for': '1.2.3.4' },
     });
 
-    const result = checkRateLimit(request, { maxRequests: 5, windowSeconds: 60 });
+    const result = checkRateLimit(request, {
+      maxRequests: 5,
+      windowSeconds: 60,
+    });
 
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(4);
@@ -25,7 +28,7 @@ describe('checkRateLimit', () => {
   it('should block requests over the limit', () => {
     // Use unique IP to avoid interference from other tests
     const request = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '10.20.30.40' }
+      headers: { 'x-forwarded-for': '10.20.30.40' },
     });
 
     const config = { maxRequests: 3, windowSeconds: 60 };
@@ -51,7 +54,7 @@ describe('checkRateLimit', () => {
 
   it('should reset after window expires', () => {
     const request = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '1.2.3.4' }
+      headers: { 'x-forwarded-for': '1.2.3.4' },
     });
 
     const config = { maxRequests: 2, windowSeconds: 60 };
@@ -73,11 +76,11 @@ describe('checkRateLimit', () => {
 
   it('should track different IPs separately', () => {
     const request1 = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '1.2.3.4' }
+      headers: { 'x-forwarded-for': '1.2.3.4' },
     });
 
     const request2 = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '5.6.7.8' }
+      headers: { 'x-forwarded-for': '5.6.7.8' },
     });
 
     const config = { maxRequests: 2, windowSeconds: 60 };
@@ -95,7 +98,7 @@ describe('checkRateLimit', () => {
 
   it('should handle CF-Connecting-IP header', () => {
     const request = new Request('http://localhost/api/search.json', {
-      headers: { 'cf-connecting-ip': '1.2.3.4' }
+      headers: { 'cf-connecting-ip': '1.2.3.4' },
     });
 
     const result = checkRateLimit(request);
@@ -104,7 +107,7 @@ describe('checkRateLimit', () => {
 
   it('should handle x-real-ip header', () => {
     const request = new Request('http://localhost/api/search.json', {
-      headers: { 'x-real-ip': '1.2.3.4' }
+      headers: { 'x-real-ip': '1.2.3.4' },
     });
 
     const result = checkRateLimit(request);
@@ -118,7 +121,7 @@ describe('createRateLimitHeaders', () => {
       allowed: true,
       limit: 10,
       remaining: 7,
-      resetTime: 1700000000000
+      resetTime: 1700000000000,
     };
 
     const headers = createRateLimitHeaders(result);

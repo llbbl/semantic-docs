@@ -11,9 +11,10 @@ import { logger } from '@logan/logger';
 const url = process.env.TURSO_DB_URL;
 const authToken = process.env.TURSO_AUTH_TOKEN;
 
-const client = (url && authToken)
-  ? createClient({ url, authToken })
-  : createClient({ url: 'file:local.db' });
+const client =
+  url && authToken
+    ? createClient({ url, authToken })
+    : createClient({ url: 'file:local.db' });
 
 if (!url || !authToken) {
   logger.info('Using local libSQL database (file:local.db)');
@@ -69,7 +70,6 @@ try {
     logger.error('Table creation verification failed');
     process.exit(1);
   }
-
 } catch (error) {
   logger.error('Database initialization failed');
   console.error(error);

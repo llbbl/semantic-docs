@@ -12,9 +12,10 @@ import { logger } from '@logan/logger';
 const url = process.env.TURSO_DB_URL;
 const authToken = process.env.TURSO_AUTH_TOKEN;
 
-const client = (url && authToken)
-  ? createClient({ url, authToken })
-  : createClient({ url: 'file:local.db' });
+const client =
+  url && authToken
+    ? createClient({ url, authToken })
+    : createClient({ url: 'file:local.db' });
 
 if (!url || !authToken) {
   logger.info('Using local libSQL database (file:local.db)');
@@ -30,12 +31,14 @@ const result = await indexContent({
   client,
   contentPath: './content',
   embeddingOptions: {
-    provider: (process.env.EMBEDDING_PROVIDER as 'local' | 'gemini' | 'openai') || 'local',
-    dimensions: 768
+    provider:
+      (process.env.EMBEDDING_PROVIDER as 'local' | 'gemini' | 'openai') ||
+      'local',
+    dimensions: 768,
   },
   onProgress: (current, total, file) => {
     logger.info(`[${current}/${total}] Indexing: ${file}`);
-  }
+  },
 });
 
 logger.info(`Indexing complete!`);

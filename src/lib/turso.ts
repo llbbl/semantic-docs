@@ -3,7 +3,7 @@
  * Falls back to local SQLite file when Turso credentials aren't available
  */
 
-import { createClient, type Client } from '@libsql/client';
+import { type Client, createClient } from '@libsql/client';
 
 let client: Client | null = null;
 
@@ -30,5 +30,5 @@ export {
   getAllArticles,
   getArticleBySlug,
   getArticlesByFolder,
-  getFolders
+  getFolders,
 } from '@logan/libsql-search';

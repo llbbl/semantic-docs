@@ -1,13 +1,13 @@
 ---
 export const prerender = true;
 
-import DocsLayout from "../../layouts/DocsLayout.astro";
-import DocsHeader from "../../components/DocsHeader.astro";
-import DocsSidebar from "../../components/DocsSidebar.astro";
-import DocsToc from "../../components/DocsToc.tsx";
-import { getAllArticles, getArticleBySlug } from "@logan/libsql-search";
-import { getTursoClient } from "../../lib/turso";
-import { marked } from "marked";
+import { getAllArticles, getArticleBySlug } from '@logan/libsql-search';
+import { marked } from 'marked';
+import DocsHeader from '../../components/DocsHeader.astro';
+import DocsSidebar from '../../components/DocsSidebar.astro';
+import DocsToc from '../../components/DocsToc.tsx';
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import { getTursoClient } from '../../lib/turso';
 
 // Generate static paths for all articles at build time
 export async function getStaticPaths() {
@@ -23,7 +23,7 @@ export async function getStaticPaths() {
 const { slug } = Astro.params;
 
 if (!slug) {
-  return Astro.redirect("/");
+  return Astro.redirect('/');
 }
 
 // Fetch the article from database
@@ -31,7 +31,7 @@ const client = getTursoClient();
 const article = await getArticleBySlug(client, slug);
 
 if (!article) {
-  return Astro.redirect("/404");
+  return Astro.redirect('/404');
 }
 
 // Convert markdown to HTML
