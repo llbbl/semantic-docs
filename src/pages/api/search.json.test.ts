@@ -1,4 +1,5 @@
 import type { SearchResult } from '@logan/libsql-search';
+import type { APIContext } from 'astro';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GET, POST } from './search.json';
 
@@ -12,6 +13,11 @@ vi.mock('../../lib/turso', () => ({
 }));
 
 const { search } = await import('@logan/libsql-search');
+
+// Helper to create a minimal APIContext for testing
+function createMockContext(request: Request): APIContext {
+  return { request } as APIContext;
+}
 
 describe('Search API Route', () => {
   beforeEach(() => {
@@ -41,7 +47,7 @@ describe('Search API Route', () => {
         body: JSON.stringify({ query: 'test query', limit: 5 }),
       });
 
-      const response = await POST({ request } as any);
+      const response = await POST(createMockContext(request));
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -57,7 +63,7 @@ describe('Search API Route', () => {
         body: JSON.stringify({ limit: 5 }),
       });
 
-      const response = await POST({ request } as any);
+      const response = await POST(createMockContext(request));
       const data = await response.json();
 
       expect(response.status).toBe(400);
@@ -71,7 +77,7 @@ describe('Search API Route', () => {
         body: JSON.stringify({ query: 123, limit: 5 }),
       });
 
-      const response = await POST({ request } as any);
+      const response = await POST(createMockContext(request));
       const data = await response.json();
 
       expect(response.status).toBe(400);
@@ -88,7 +94,7 @@ describe('Search API Route', () => {
         body: JSON.stringify({ query: 'test' }),
       });
 
-      await POST({ request } as any);
+      await POST(createMockContext(request));
 
       expect(search).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -109,7 +115,7 @@ describe('Search API Route', () => {
         body: JSON.stringify({ query: 'test' }),
       });
 
-      const response = await POST({ request } as any);
+      const response = await POST(createMockContext(request));
       const data = await response.json();
 
       expect(response.status).toBe(500);
@@ -129,7 +135,7 @@ describe('Search API Route', () => {
         body: JSON.stringify({ query: 'test' }),
       });
 
-      await POST({ request } as any);
+      await POST(createMockContext(request));
 
       expect(search).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -145,7 +151,7 @@ describe('Search API Route', () => {
 
   describe('GET', () => {
     it('should return 405 for GET requests', async () => {
-      const response = await GET({} as any);
+      const response = await GET({} as APIContext);
       const data = await response.json();
 
       expect(response.status).toBe(405);

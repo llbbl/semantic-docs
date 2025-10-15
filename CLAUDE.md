@@ -35,6 +35,11 @@ pnpm index:local     # Index to local database
 
 # Run tests
 pnpm test
+
+# Linting and formatting
+pnpm lint       # Check code with Biome
+pnpm lint:fix   # Auto-fix issues
+pnpm format     # Format all files
 ```
 
 **Important:**

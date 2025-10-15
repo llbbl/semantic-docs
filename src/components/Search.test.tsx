@@ -46,10 +46,10 @@ describe('Search Component', () => {
       query: 'test',
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => mockResults,
-    });
+    } as Response);
 
     render(<Search />);
     const input = screen.getByPlaceholderText('Search articles...');
@@ -87,10 +87,10 @@ describe('Search Component', () => {
       query: 'test',
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => mockResults,
-    });
+    } as Response);
 
     render(<Search />);
     const input = screen.getByPlaceholderText('Search articles...');
@@ -106,7 +106,7 @@ describe('Search Component', () => {
   });
 
   it('should show error message on search failure', async () => {
-    (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+    vi.mocked(global.fetch).mockRejectedValueOnce(new Error('Network error'));
 
     render(<Search />);
     const input = screen.getByPlaceholderText('Search articles...');
@@ -127,10 +127,10 @@ describe('Search Component', () => {
       query: 'nonexistent',
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => mockResults,
-    });
+    } as Response);
 
     render(<Search />);
     const input = screen.getByPlaceholderText('Search articles...');
@@ -157,10 +157,10 @@ describe('Search Component', () => {
       query: 'test',
     };
 
-    (global.fetch as any).mockResolvedValueOnce({
+    vi.mocked(global.fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => mockResults,
-    });
+    } as Response);
 
     render(<Search maxResults={10} />);
     const input = screen.getByPlaceholderText('Search articles...');

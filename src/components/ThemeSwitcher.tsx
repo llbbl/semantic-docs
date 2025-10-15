@@ -15,7 +15,7 @@ export default function ThemeSwitcher() {
     const savedTheme = localStorage.getItem('theme') || defaultTheme;
     setCurrentTheme(savedTheme);
     applyTheme(savedTheme);
-  }, [applyTheme]);
+  }, []);
 
   const applyTheme = (themeName: string) => {
     const theme = themes.find((t) => t.name === themeName);
@@ -42,6 +42,7 @@ export default function ThemeSwitcher() {
   return (
     <div className="relative">
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-9 px-3"
         aria-label="Switch theme"
@@ -51,6 +52,7 @@ export default function ThemeSwitcher() {
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
+          aria-hidden="true"
         >
           <path
             strokeLinecap="round"
@@ -64,9 +66,16 @@ export default function ThemeSwitcher() {
 
       {isOpen && (
         <>
-          <div
-            className="fixed inset-0 z-40"
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-transparent border-0 p-0 cursor-default"
             onClick={() => setIsOpen(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' || e.key === 'Enter') {
+                setIsOpen(false);
+              }
+            }}
+            aria-label="Close theme menu"
           />
           <div className="absolute right-0 mt-2 w-48 rounded-md border border-border bg-popover shadow-lg z-50">
             <div className="p-2">
@@ -75,6 +84,7 @@ export default function ThemeSwitcher() {
               </div>
               {themes.map((theme) => (
                 <button
+                  type="button"
                   key={theme.name}
                   onClick={() => handleThemeChange(theme.name)}
                   className={`
@@ -94,6 +104,7 @@ export default function ThemeSwitcher() {
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
+                        aria-hidden="true"
                       >
                         <path
                           strokeLinecap="round"

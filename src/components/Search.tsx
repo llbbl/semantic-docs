@@ -129,9 +129,9 @@ export default function Search({
           aria-label="Search articles"
         />
         {loading && (
-          <div className="search-spinner" aria-label="Loading">
-            ⏳
-          </div>
+          <output className="search-spinner" aria-live="polite">
+            <span className="sr-only">Loading</span>⏳
+          </output>
         )}
       </div>
 
@@ -157,8 +157,8 @@ export default function Search({
               </div>
               {result.tags.length > 0 && (
                 <div className="result-tags">
-                  {result.tags.map((tag, idx) => (
-                    <span key={idx} className="result-tag">
+                  {result.tags.map((tag) => (
+                    <span key={tag} className="result-tag">
                       {tag}
                     </span>
                   ))}
@@ -316,6 +316,18 @@ export default function Search({
           color: var(--muted-foreground);
           font-size: 0.875rem;
           text-align: center;
+        }
+
+        .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border-width: 0;
         }
       `}</style>
     </div>

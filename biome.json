@@ -6,7 +6,8 @@
     "useIgnoreFile": true
   },
   "files": {
-    "ignoreUnknown": false
+    "ignoreUnknown": false,
+    "includes": ["**", "!.claude"]
   },
   "formatter": {
     "enabled": true,
@@ -19,7 +20,8 @@
       "recommended": true,
       "correctness": {
         "noUnusedImports": "off",
-        "noUnusedVariables": "off"
+        "noUnusedVariables": "off",
+        "useExhaustiveDependencies": "off"
       },
       "suspicious": {
         "noImplicitAnyLet": "off",
