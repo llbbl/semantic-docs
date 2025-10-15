@@ -1,0 +1,80 @@
+---
+/**
+ * Docs Layout - v0 style documentation layout
+ * Based on modern docs UI with header, sidebar, content, and TOC
+ */
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title = "Astro Vault", description = "Documentation" } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    <script is:inline>
+      // Initialize theme immediately to prevent flash
+      (function() {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        const themes = {
+          dark: {
+            background: '#1a1a1a',
+            foreground: '#fafafa',
+            sidebar: '#0f0f0f',
+            toc: '#262626'
+          },
+          light: {
+            background: '#ffffff',
+            foreground: '#171717',
+            sidebar: '#f9fafb',
+            toc: '#fafafa'
+          },
+          ocean: {
+            background: '#0a1628',
+            foreground: '#e0f2fe',
+            sidebar: '#071220',
+            toc: '#0f2942'
+          },
+          forest: {
+            background: '#0f1e13',
+            foreground: '#d1fae5',
+            sidebar: '#0a140d',
+            toc: '#14291a'
+          },
+          sunset: {
+            background: '#1c0f0a',
+            foreground: '#fef3c7',
+            sidebar: '#110a07',
+            toc: '#2a1510'
+          },
+          purple: {
+            background: '#1a0a1f',
+            foreground: '#f3e8ff',
+            sidebar: '#0f0514',
+            toc: '#241129'
+          },
+        };
+        const theme = themes[savedTheme];
+        if (theme) {
+          document.documentElement.style.setProperty('--background', theme.background);
+          document.documentElement.style.setProperty('--foreground', theme.foreground);
+          document.documentElement.style.setProperty('--sidebar', theme.sidebar);
+          document.documentElement.style.setProperty('--toc', theme.toc);
+        }
+      })();
+    </script>
+  </head>
+  <body class="min-h-screen">
+    <slot />
+  </body>
+</html>

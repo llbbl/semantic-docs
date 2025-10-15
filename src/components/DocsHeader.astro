@@ -1,0 +1,61 @@
+---
+/**
+ * Docs Header Component
+ * Sticky header with logo, search, and navigation
+ */
+import Search from './Search.tsx';
+import ThemeSwitcher from './ThemeSwitcher.tsx';
+---
+
+<header class="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+  <div class="flex h-14 items-center px-4 lg:px-6">
+    <!-- Mobile menu button -->
+    <button
+      id="mobile-menu-button"
+      class="mr-2 lg:hidden inline-flex items-center justify-center rounded-md p-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ring"
+      aria-label="Toggle menu"
+    >
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+
+    <!-- Logo -->
+    <a href="/" class="flex items-center gap-2 font-semibold">
+      <div class="flex h-6 w-6 items-center justify-center rounded bg-foreground text-background font-mono text-sm">
+        A
+      </div>
+      <span class="font-sans">Astro Vault</span>
+    </a>
+
+    <!-- Search and Nav -->
+    <div class="flex flex-1 items-center justify-between gap-2 md:justify-end">
+      <!-- Search Component -->
+      <div class="w-full flex-1 md:w-auto md:flex-none md:ml-4">
+        <Search client:load />
+      </div>
+
+      <!-- Right Nav -->
+      <nav class="flex items-center gap-2">
+        <ThemeSwitcher client:load />
+        <a
+          href="https://github.com/llbbl/semantic-docs"
+          class="hidden md:inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
+        >
+          GitHub
+        </a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<script>
+  // Mobile menu toggle
+  const mobileMenuButton = document.getElementById('mobile-menu-button');
+  const sidebar = document.getElementById('docs-sidebar');
+
+  mobileMenuButton?.addEventListener('click', () => {
+    sidebar?.classList.toggle('translate-x-0');
+    sidebar?.classList.toggle('-translate-x-full');
+  });
+</script>

@@ -1,0 +1,132 @@
+---
+export const prerender = true;
+
+import DocsLayout from "../../layouts/DocsLayout.astro";
+import DocsHeader from "../../components/DocsHeader.astro";
+import DocsSidebar from "../../components/DocsSidebar.astro";
+import DocsToc from "../../components/DocsToc.tsx";
+import { getAllArticles, getArticleBySlug } from "@logan/libsql-search";
+import { getTursoClient } from "../../lib/turso";
+import { marked } from "marked";
+
+// Generate static paths for all articles at build time
+export async function getStaticPaths() {
+  const client = getTursoClient();
+  const allArticles = await getAllArticles(client);
+
+  return allArticles.map((article) => ({
+    params: { slug: article.slug },
+  }));
+}
+
+// Get the slug from the URL
+const { slug } = Astro.params;
+
+if (!slug) {
+  return Astro.redirect("/");
+}
+
+// Fetch the article from database
+const client = getTursoClient();
+const article = await getArticleBySlug(client, slug);
+
+if (!article) {
+  return Astro.redirect("/404");
+}
+
+// Convert markdown to HTML
+const htmlContent = await marked(article.content);
+
+// Parse tags
+const tags = article.tags;
+---
+
+<DocsLayout title={article.title} description={article.title}>
+  <DocsHeader />
+
+  <div class="flex">
+    <DocsSidebar />
+
+    <main class="flex-1 lg:pl-64 xl:pr-64">
+      <div class="mx-auto max-w-4xl px-6 py-8 lg:px-8">
+        <article class="prose prose-neutral dark:prose-invert max-w-none">
+          <header class="mb-8 pb-6 border-b border-border">
+            <h1 class="text-4xl font-bold tracking-tight text-balance mb-4">{article.title}</h1>
+            {tags.length > 0 && (
+              <div class="flex flex-wrap gap-2">
+                {tags.map((tag: string) => (
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </header>
+
+          <div class="article-content" set:html={htmlContent} />
+
+          <footer class="mt-12 pt-6 border-t border-border">
+            <p class="text-sm text-muted-foreground">
+              Last updated: {new Date(article.updated_at).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
+          </footer>
+        </article>
+      </div>
+    </main>
+
+    <DocsToc client:load />
+  </div>
+</DocsLayout>
+
+<style>
+  /* Article content styling */
+  .article-content :global(h2) {
+    scroll-margin-top: 5rem;
+  }
+
+  .article-content :global(h3) {
+    scroll-margin-top: 5rem;
+  }
+
+  .article-content :global(pre) {
+    background: oklch(0.205 0 0);
+    color: oklch(0.985 0 0);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+  }
+
+  .article-content :global(code) {
+    background: oklch(0.269 0 0);
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.9em;
+    font-family: 'Monaco', 'Courier New', monospace;
+  }
+
+  .article-content :global(pre code) {
+    background: transparent;
+    padding: 0;
+  }
+
+  .article-content :global(a) {
+    color: oklch(0.488 0.243 264.376);
+    text-decoration: none;
+  }
+
+  .article-content :global(a:hover) {
+    text-decoration: underline;
+  }
+
+  .article-content :global(blockquote) {
+    border-left: 4px solid oklch(0.269 0 0);
+    padding-left: 1rem;
+    font-style: italic;
+    color: oklch(0.708 0 0);
+  }
+</style>
