@@ -1,16 +1,23 @@
 /**
  * Database Schema Initialization Script
- * Sets up the Turso database with vector search support
+ * Sets up the database with vector search support
+ * Falls back to local libSQL if Turso credentials aren't available
  */
 
 import { createClient } from '@libsql/client';
 import { logger } from '@logan/logger';
 
-// Initialize Turso client
-const client = createClient({
-  url: process.env.TURSO_DB_URL!,
-  authToken: process.env.TURSO_AUTH_TOKEN!,
-});
+// Initialize client (Turso or local libSQL)
+const url = process.env.TURSO_DB_URL;
+const authToken = process.env.TURSO_AUTH_TOKEN;
+
+const client = (url && authToken)
+  ? createClient({ url, authToken })
+  : createClient({ url: 'file:local.db' });
+
+if (!url || !authToken) {
+  logger.info('Using local libSQL database (file:local.db)');
+}
 
 logger.info('Initializing database schema...');
 

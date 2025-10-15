@@ -59,11 +59,13 @@ pnpm test
 - All content queries use functions from libsql-search: `getAllArticles()`, `getArticleBySlug()`, `getArticlesByFolder()`, `getFolders()`
 
 ### Environment Variables
-Required in `.env`:
-- `TURSO_DB_URL`: Turso database URL (libsql://...)
-- `TURSO_AUTH_TOKEN`: Turso authentication token
+Optional in `.env`:
+- `TURSO_DB_URL`: Turso database URL (libsql://...) - if not set, uses local libSQL file
+- `TURSO_AUTH_TOKEN`: Turso authentication token - if not set, uses local libSQL file
 - `EMBEDDING_PROVIDER`: "local" (default), "gemini", or "openai"
 - Optional: `GEMINI_API_KEY` or `OPENAI_API_KEY` (if using cloud providers)
+
+**Local Development**: If Turso credentials aren't provided, the project automatically falls back to a local SQLite file (`local.db`) for database operations. This is useful for CI builds and local development without cloud dependencies.
 
 ## Critical Configuration
 

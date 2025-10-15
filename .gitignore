@@ -35,3 +35,11 @@ Thumbs.db
 # Temporary files
 *.tmp
 .cache/
+
+# Local database files
+local.db
+local.db-shm
+local.db-wal
+*.db
+*.db-shm
+*.db-wal

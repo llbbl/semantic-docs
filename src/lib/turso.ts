@@ -1,5 +1,6 @@
 /**
- * Turso client wrapper using libsql-search
+ * Turso/LibSQL client wrapper using libsql-search
+ * Falls back to local SQLite file when Turso credentials aren't available
  */
 
 import { createClient, type Client } from '@libsql/client';
@@ -11,11 +12,14 @@ export function getTursoClient(): Client {
     const url = import.meta.env.TURSO_DB_URL || process.env.TURSO_DB_URL;
     const authToken = import.meta.env.TURSO_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN;
 
-    if (!url || !authToken) {
-      throw new Error('TURSO_DB_URL and TURSO_AUTH_TOKEN are required');
+    if (url && authToken) {
+      // Use Turso remote database
+      client = createClient({ url, authToken });
+    } else {
+      // Fall back to local libSQL file (for CI/development)
+      console.warn('Turso credentials not found, using local libSQL database');
+      client = createClient({ url: 'file:local.db' });
     }
-
-    client = createClient({ url, authToken });
   }
 
   return client;

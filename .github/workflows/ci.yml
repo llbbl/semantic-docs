@@ -31,6 +31,12 @@ jobs:
       - name: Run tests
         run: pnpm test --run
 
+      - name: Initialize database
+        run: pnpm db:init
+
+      - name: Index content
+        run: pnpm index
+
       - name: Build
         run: pnpm build
 
