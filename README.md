@@ -88,13 +88,19 @@ Your content here...
 ### 5. Index Content
 
 ```bash
+# Initialize database and index content to Turso
+pnpm db:init
 pnpm index
+
+# Or use local database without Turso (for testing)
+pnpm db:init:local
+pnpm index:local
 ```
 
 This will:
 - Scan your markdown files
 - Generate embeddings (using local model by default)
-- Store everything in Turso
+- Store everything in Turso (or local.db with `:local` commands)
 
 ### 6. Start Development
 

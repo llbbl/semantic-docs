@@ -25,17 +25,23 @@ pnpm preview
 
 ### Content Management
 ```bash
-# Index markdown content (MUST run before building or when content changes)
-pnpm index
+# Turso (default - requires .env with credentials)
+pnpm db:init    # Initialize Turso database schema
+pnpm index      # Index markdown content to Turso
 
-# Initialize database schema
-pnpm db:init
+# Local libSQL (for CI/testing - no .env required)
+pnpm db:init:local   # Initialize local database (file:local.db)
+pnpm index:local     # Index to local database
 
 # Run tests
 pnpm test
 ```
 
-**Important:** Always run `pnpm index` after adding/modifying content in `./content` directory before building.
+**Important:**
+- Always run `pnpm index` (or `pnpm index:local`) after adding/modifying content in `./content` directory before building.
+- Use `db:init` and `index` for production with Turso (loads `.env` file)
+- Use `db:init:local` and `index:local` for CI/local testing without Turso credentials
+- The dev server (`pnpm dev`) works with either database type
 
 ## Architecture
 

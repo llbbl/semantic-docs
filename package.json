@@ -27,7 +27,9 @@
     "build": "astro build",
     "preview": "astro preview",
     "db:init": "tsx --env-file=.env scripts/init-db.ts",
+    "db:init:local": "tsx scripts/init-db.ts",
     "index": "tsx --env-file=.env scripts/index-content.ts",
+    "index:local": "tsx scripts/index-content.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"

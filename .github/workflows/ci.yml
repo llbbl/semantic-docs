@@ -31,11 +31,11 @@ jobs:
       - name: Run tests
         run: pnpm test --run
 
-      - name: Initialize database
-        run: pnpm db:init
+      - name: Initialize local database
+        run: pnpm db:init:local
 
-      - name: Index content
-        run: pnpm index
+      - name: Index content to local database
+        run: pnpm index:local
 
       - name: Build
         run: pnpm build
