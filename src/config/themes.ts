@@ -26,6 +26,9 @@ export interface Theme {
     border: string;
     input: string;
     ring: string;
+    header: string;
+    headerForeground: string;
+    headerBorder: string;
     sidebar: string;
     sidebarForeground: string;
     sidebarPrimary: string;
@@ -64,6 +67,9 @@ export const themes: Theme[] = [
       border: '#262626',
       input: '#262626',
       ring: '#525252',
+      header: '#141414',
+      headerForeground: '#fafafa',
+      headerBorder: '#262626',
       sidebar: '#0f0f0f',
       sidebarForeground: '#fafafa',
       sidebarPrimary: '#6366f1',
@@ -100,6 +106,9 @@ export const themes: Theme[] = [
       border: '#e5e5e5',
       input: '#e5e5e5',
       ring: '#a3a3a3',
+      header: '#f5f5f5',
+      headerForeground: '#171717',
+      headerBorder: '#e5e5e5',
       sidebar: '#f9fafb',
       sidebarForeground: '#171717',
       sidebarPrimary: '#171717',
@@ -136,6 +145,9 @@ export const themes: Theme[] = [
       border: '#1e3a5f',
       input: '#1e3a5f',
       ring: '#0ea5e9',
+      header: '#0a1a2e',
+      headerForeground: '#e0f2fe',
+      headerBorder: '#1e3a5f',
       sidebar: '#071220',
       sidebarForeground: '#e0f2fe',
       sidebarPrimary: '#0ea5e9',
@@ -172,6 +184,9 @@ export const themes: Theme[] = [
       border: '#1a3d23',
       input: '#1a3d23',
       ring: '#10b981',
+      header: '#0d1a11',
+      headerForeground: '#d1fae5',
+      headerBorder: '#1a3d23',
       sidebar: '#0a140d',
       sidebarForeground: '#d1fae5',
       sidebarPrimary: '#10b981',
@@ -208,6 +223,9 @@ export const themes: Theme[] = [
       border: '#3d1f15',
       input: '#3d1f15',
       ring: '#f97316',
+      header: '#1a0d08',
+      headerForeground: '#fef3c7',
+      headerBorder: '#3d1f15',
       sidebar: '#110a07',
       sidebarForeground: '#fef3c7',
       sidebarPrimary: '#f97316',
@@ -244,6 +262,9 @@ export const themes: Theme[] = [
       border: '#2e1a3d',
       input: '#2e1a3d',
       ring: '#a855f7',
+      header: '#15091c',
+      headerForeground: '#f3e8ff',
+      headerBorder: '#2e1a3d',
       sidebar: '#0f0514',
       sidebarForeground: '#f3e8ff',
       sidebarPrimary: '#a855f7',

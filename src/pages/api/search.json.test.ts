@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST, GET } from './search.json';
+import type { SearchResult } from '@logan/libsql-search';
 
 // Mock dependencies
 vi.mock('@logan/libsql-search', () => ({
@@ -26,7 +27,9 @@ describe('Search API Route', () => {
           slug: 'test',
           folder: 'docs',
           tags: ['test'],
-          distance: 0.5
+          distance: 0.5,
+          content: 'Test content',
+          created_at: '2024-01-01T00:00:00Z'
         }
       ];
 
@@ -76,7 +79,7 @@ describe('Search API Route', () => {
     });
 
     it('should use default limit of 10 when not provided', async () => {
-      const mockResults = [];
+      const mockResults: SearchResult[] = [];
       vi.mocked(search).mockResolvedValueOnce(mockResults);
 
       const request = new Request('http://localhost/api/search.json', {
@@ -115,7 +118,7 @@ describe('Search API Route', () => {
     it('should respect embedding provider from environment', async () => {
       vi.stubEnv('EMBEDDING_PROVIDER', 'gemini');
 
-      const mockResults = [];
+      const mockResults: SearchResult[] = [];
       vi.mocked(search).mockResolvedValueOnce(mockResults);
 
       const request = new Request('http://localhost/api/search.json', {

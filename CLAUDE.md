@@ -28,8 +28,11 @@ pnpm preview
 # Index markdown content (MUST run before building or when content changes)
 pnpm index
 
-# Equivalent to:
-node --env-file=.env ./scripts/index-content.js
+# Initialize database schema
+pnpm db:init
+
+# Run tests
+pnpm test
 ```
 
 **Important:** Always run `pnpm index` after adding/modifying content in `./content` directory before building.
@@ -37,10 +40,10 @@ node --env-file=.env ./scripts/index-content.js
 ## Architecture
 
 ### Content Flow
-1. **Markdown → Database**: Content in `./content` is indexed into Turso via `scripts/index-content.js`
+1. **Markdown → Database**: Content in `./content` is indexed into Turso via `scripts/index-content.ts`
 2. **libsql-search**: Handles embedding generation (local/Gemini/OpenAI), vector storage, and semantic search
 3. **Static Generation**: Article pages are pre-rendered at build time using `getStaticPaths()`
-4. **Server Search**: Search API runs server-side at `/api/search.json` (requires `output: 'server'` in astro.config.mjs)
+4. **Server Search**: Search API runs server-side at `/api/search.json` (requires `output: 'server'` with Node.js adapter)
 
 ### Key Components
 - **Search.tsx**: Client-side search UI with debounced API calls (300ms), displays results in dropdown
@@ -51,7 +54,8 @@ node --env-file=.env ./scripts/index-content.js
 
 ### Database Integration
 - **src/lib/turso.ts**: Singleton client wrapper, re-exports libsql-search utilities
-- **scripts/index-content.js**: Indexes markdown files, creates table with 768-dimension vectors
+- **scripts/init-db.ts**: Initializes database schema with vector search support
+- **scripts/index-content.ts**: Indexes markdown files, creates table with 768-dimension vectors
 - All content queries use functions from libsql-search: `getAllArticles()`, `getArticleBySlug()`, `getArticlesByFolder()`, `getFolders()`
 
 ### Environment Variables
@@ -63,8 +67,14 @@ Required in `.env`:
 
 ## Critical Configuration
 
-### Server-Side Rendering Required
-The search API endpoint requires SSR. **Never** change `output: 'server'` in `astro.config.mjs` to 'static' or search will break.
+### Server-Side Rendering + Node.js Adapter Required
+The search API endpoint requires SSR with a Node.js adapter. The configuration uses:
+- `output: 'server'` - Enables server-side rendering
+- `adapter: node()` - Required for deployment (from @astrojs/node package)
+- Article pages marked with `prerender: true` are pre-rendered as static HTML
+- Search API marked with `prerender: false` runs server-side
+
+**Never** remove the adapter or change output to 'static', or the search API will break.
 
 ### Content Structure
 Content in `./content` must follow this pattern:
@@ -82,28 +92,38 @@ tags: [tag1, tag2]
 ---
 ```
 
-### Hybrid Rendering
-- Article pages (`/content/[...slug].astro`): Pre-rendered static (`prerender: true`)
-- Search API (`/api/search.json.ts`): Server-rendered (`prerender: false`)
-- This hybrid approach provides fast static pages with dynamic search
+### Selective Pre-rendering
+- Article pages (`/content/[...slug].astro`): Pre-rendered static at build time (`export const prerender = true`)
+- Search API (`/api/search.json.ts`): Server-rendered on-demand (`export const prerender = false`)
+- This approach provides fast static pages with dynamic server-side search
+- Uses `getStaticPaths()` to generate all article pages at build time
 
 ## Integration Points
 
 ### Adding New libsql-search Features
 The project relies heavily on libsql-search. When modifying search behavior:
 1. Check libsql-search documentation for available options
-2. Update `scripts/index-content.js` for indexing changes
+2. Update `scripts/index-content.ts` for indexing changes
 3. Update `src/pages/api/search.json.ts` for search query changes
 4. Maintain embedding dimension consistency (768) across indexing and search
 
 ### Customizing Embedding Providers
 To switch providers, update `.env` and ensure API keys are set. The dimension (768) must match across:
-- `scripts/index-content.js` (createTable and indexContent)
+- `scripts/index-content.ts` (createTable and indexContent)
 - Search API (automatically uses same provider)
 - Re-index content after switching providers
 
 ### Styling
 - Uses Tailwind CSS 4 via Vite plugin
-- OKLCH color space for perceptual color uniformity
+- RGB hex colors for maximum browser compatibility
 - CSS variables defined in global.css for theming
-- Inline styles in components for search results, article content
+- Multi-theme system with 6 pre-built themes (dark, light, ocean, forest, sunset, purple)
+- ThemeSwitcher component allows runtime theme changes
+- Complementary colors for sidebar (darker) and TOC (lighter) in each theme
+
+### Security & Rate Limiting
+- In-memory rate limiting on search API: 20 requests per minute per IP
+- Query length validation: 500 character maximum
+- Results limit enforcement: 1-20 results
+- Standard rate limit headers (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset)
+- See `docs/SECURITY.md` for comprehensive security considerations

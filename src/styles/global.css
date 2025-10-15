@@ -26,6 +26,9 @@
   --border: #e5e5e5;
   --input: #e5e5e5;
   --ring: #a3a3a3;
+  --header: #f5f5f5;
+  --header-foreground: #171717;
+  --header-border: #e5e5e5;
   --chart-1: #f97316;
   --chart-2: #14b8a6;
   --chart-3: #eab308;
@@ -65,6 +68,9 @@
   --border: #262626;
   --input: #262626;
   --ring: #525252;
+  --header: #141414;
+  --header-foreground: #fafafa;
+  --header-border: #262626;
   --chart-1: #6366f1;
   --chart-2: #22c55e;
   --chart-3: #eab308;
@@ -103,6 +109,9 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-header: var(--header);
+  --color-header-foreground: var(--header-foreground);
+  --color-header-border: var(--header-border);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);

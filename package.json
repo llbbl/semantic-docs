@@ -33,6 +33,7 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
+    "@astrojs/node": "^9.5.0",
     "@astrojs/react": "^4.4.0",
     "@libsql/client": "^0.15.15",
     "@logan/libsql-search": "jsr:^0.1.3",
