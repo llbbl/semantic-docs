@@ -50,6 +50,16 @@ export default function DocsToc() {
     return () => observer.disconnect();
   }, []);
 
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Update URL without jumping
+      window.history.pushState(null, '', `#${id}`);
+    }
+  };
+
   if (toc.length === 0) {
     return null;
   }
@@ -66,6 +76,7 @@ export default function DocsToc() {
               <li key={item.id}>
                 <a
                   href={`#${item.id}`}
+                  onClick={(e) => handleClick(e, item.id)}
                   className={`
                     block text-sm transition-colors
                     ${item.level === 3 ? 'pl-4' : ''}
