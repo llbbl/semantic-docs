@@ -1,10 +1,18 @@
 /**
  * Semantic Search Component
  *
- * Real-time vector search using Turso embeddings
+ * Command dialog with ⌘K keyboard shortcut
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 
 interface SearchResult {
   id: number;
@@ -22,23 +30,32 @@ interface SearchProps {
 
 export default function Search({
   placeholder = 'Search articles...',
-  maxResults = 5,
+  maxResults = 10,
 }: SearchProps) {
+  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showResults, setShowResults] = useState(false);
-
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Handle ⌘K keyboard shortcut
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setOpen((open) => !open);
+      }
+    };
+    document.addEventListener('keydown', down);
+    return () => document.removeEventListener('keydown', down);
+  }, []);
 
   // Debounced search function
   const performSearch = useCallback(
     async (searchQuery: string) => {
       if (searchQuery.length < 2) {
         setResults([]);
-        setShowResults(false);
         return;
       }
 
@@ -61,7 +78,6 @@ export default function Search({
 
         const data = await response.json();
         setResults(data.results || []);
-        setShowResults(true);
       } catch (err) {
         console.error('Search error:', err);
         setError('Search failed. Please try again.');
@@ -74,38 +90,24 @@ export default function Search({
   );
 
   // Handle input changes with debouncing
-  const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
+  const handleValueChange = useCallback(
+    (value: string) => {
       setQuery(value);
 
-      // Clear existing timeout
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
 
-      // Set new timeout for debounced search
-      searchTimeoutRef.current = setTimeout(() => {
-        performSearch(value);
-      }, 300);
+      if (value.length >= 2) {
+        searchTimeoutRef.current = setTimeout(() => {
+          performSearch(value);
+        }, 300);
+      } else {
+        setResults([]);
+      }
     },
     [performSearch],
   );
-
-  // Handle clicks outside search results
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        searchContainerRef.current &&
-        !searchContainerRef.current.contains(event.target as Node)
-      ) {
-        setShowResults(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -116,220 +118,116 @@ export default function Search({
     };
   }, []);
 
+  // Reset query when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setQuery('');
+      setResults([]);
+    }
+  }, [open]);
+
+  // Group results by folder
+  const groupedResults = results.reduce(
+    (acc, result) => {
+      if (!acc[result.folder]) {
+        acc[result.folder] = [];
+      }
+      acc[result.folder].push(result);
+      return acc;
+    },
+    {} as Record<string, SearchResult[]>,
+  );
+
   return (
-    <div className="search-container" ref={searchContainerRef}>
-      <div className="search-input-wrapper">
-        <input
-          type="search"
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="relative w-full h-10 flex items-center justify-center sm:justify-start px-2 py-2 text-left text-sm bg-muted/50 border border-input rounded-lg hover:bg-muted transition-colors sm:px-3 sm:pl-10"
+        aria-label="Search"
+      >
+        <svg
+          className="h-4 w-4 text-muted-foreground sm:absolute sm:left-3 sm:top-1/2 sm:-translate-y-1/2"
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
+        </svg>
+        <span className="text-muted-foreground truncate hidden sm:inline">
+          {placeholder}
+        </span>
+        <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden lg:flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100">
+          <span className="text-xs">⌘</span>K
+        </kbd>
+      </button>
+
+      <CommandDialog open={open} onOpenChange={setOpen}>
+        <CommandInput
           placeholder={placeholder}
           value={query}
-          onChange={handleInputChange}
-          onFocus={() => query.length >= 2 && setShowResults(true)}
-          className="search-input"
-          aria-label="Search articles"
+          onValueChange={handleValueChange}
         />
-        {loading && (
-          <output className="search-spinner" aria-live="polite">
-            <span className="sr-only">Loading</span>⏳
-          </output>
-        )}
-      </div>
-
-      {error && (
-        <div className="search-error" role="alert">
-          {error}
-        </div>
-      )}
-
-      {showResults && results.length > 0 && (
-        <div className="search-results" role="listbox">
-          {results.map((result) => (
-            <a
-              key={result.id}
-              href={`/content/${result.slug}`}
-              className="search-result"
-              role="option"
-              onClick={() => setShowResults(false)}
-            >
-              <div className="result-header">
-                <h3 className="result-title">{result.title}</h3>
-                <span className="result-folder">{result.folder}</span>
-              </div>
-              {result.tags.length > 0 && (
-                <div className="result-tags">
-                  {result.tags.map((tag) => (
-                    <span key={tag} className="result-tag">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </a>
-          ))}
-        </div>
-      )}
-
-      {showResults && query.length >= 2 && results.length === 0 && !loading && (
-        <div className="search-no-results">No results found for "{query}"</div>
-      )}
-
-      <style>{`
-        .search-container {
-          position: relative;
-          width: 100%;
-          max-width: 500px;
-        }
-
-        .search-input-wrapper {
-          position: relative;
-        }
-
-        .search-input {
-          width: 100%;
-          height: 2.5rem;
-          padding-left: 2.5rem;
-          padding-right: 1rem;
-          font-size: 0.875rem;
-          background-color: oklch(var(--muted) / 0.5);
-          border: 1px solid transparent;
-          border-radius: 0.5rem;
-          color: var(--foreground);
-          outline: none;
-          transition: all 0.2s;
-        }
-
-        .search-input::placeholder {
-          color: var(--muted-foreground);
-        }
-
-        .search-input:focus {
-          background-color: var(--background);
-          border-color: var(--ring);
-        }
-
-        .search-input-wrapper::before {
-          content: '';
-          position: absolute;
-          left: 0.625rem;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 1rem;
-          height: 1rem;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
-          background-size: contain;
-          background-repeat: no-repeat;
-        }
-
-        .search-spinner {
-          position: absolute;
-          right: 1rem;
-          top: 50%;
-          transform: translateY(-50%);
-          font-size: 1.25rem;
-        }
-
-        .search-error {
-          margin-top: 0.5rem;
-          padding: 0.5rem;
-          background: #fee;
-          color: #c33;
-          border-radius: 4px;
-          font-size: 0.875rem;
-        }
-
-        .search-results {
-          position: absolute;
-          top: calc(100% + 0.5rem);
-          left: 0;
-          right: 0;
-          background: var(--popover);
-          border: 1px solid var(--border);
-          border-radius: 0.5rem;
-          box-shadow: 0 4px 12px oklch(0 0 0 / 0.1);
-          max-height: 400px;
-          overflow-y-auto;
-          z-index: 100;
-        }
-
-        .search-result {
-          display: block;
-          padding: 0.75rem 1rem;
-          border-bottom: 1px solid var(--border);
-          text-decoration: none;
-          color: var(--popover-foreground);
-          transition: background-color 0.2s;
-        }
-
-        .search-result:last-child {
-          border-bottom: none;
-        }
-
-        .search-result:hover {
-          background-color: var(--accent);
-        }
-
-        .result-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: baseline;
-          margin-bottom: 0.25rem;
-        }
-
-        .result-title {
-          margin: 0;
-          font-size: 0.875rem;
-          font-weight: 600;
-          color: var(--foreground);
-        }
-
-        .result-folder {
-          font-size: 0.625rem;
-          color: var(--muted-foreground);
-          text-transform: uppercase;
-          margin-left: 0.5rem;
-          letter-spacing: 0.05em;
-        }
-
-        .result-tags {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.25rem;
-        }
-
-        .result-tag {
-          padding: 0.125rem 0.375rem;
-          background: var(--muted);
-          color: var(--muted-foreground);
-          border-radius: 0.25rem;
-          font-size: 0.625rem;
-        }
-
-        .search-no-results {
-          position: absolute;
-          top: calc(100% + 0.5rem);
-          left: 0;
-          right: 0;
-          padding: 1rem;
-          background: var(--popover);
-          border: 1px solid var(--border);
-          border-radius: 0.5rem;
-          color: var(--muted-foreground);
-          font-size: 0.875rem;
-          text-align: center;
-        }
-
-        .sr-only {
-          position: absolute;
-          width: 1px;
-          height: 1px;
-          padding: 0;
-          margin: -1px;
-          overflow: hidden;
-          clip: rect(0, 0, 0, 0);
-          white-space: nowrap;
-          border-width: 0;
-        }
-      `}</style>
-    </div>
+        <CommandList>
+          {loading && (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              Searching...
+            </div>
+          )}
+          {error && (
+            <div className="py-4 px-2 text-center text-sm text-destructive">
+              {error}
+            </div>
+          )}
+          {!loading && !error && query.length >= 2 && results.length === 0 && (
+            <CommandEmpty>No results found for "{query}"</CommandEmpty>
+          )}
+          {!loading && !error && query.length < 2 && (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              Type at least 2 characters to search...
+            </div>
+          )}
+          {!loading &&
+            !error &&
+            Object.entries(groupedResults).map(([folder, folderResults]) => (
+              <CommandGroup key={folder} heading={folder.toUpperCase()}>
+                {folderResults.map((result) => (
+                  <CommandItem
+                    key={result.id}
+                    value={result.title}
+                    onSelect={() => {
+                      window.location.href = `/content/${result.slug}`;
+                      setOpen(false);
+                    }}
+                    className="flex flex-col items-start gap-1 cursor-pointer"
+                  >
+                    <div className="font-medium text-sm">{result.title}</div>
+                    {result.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {result.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-[10px]"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
+        </CommandList>
+      </CommandDialog>
+    </>
   );
 }

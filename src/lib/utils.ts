@@ -2,6 +2,16 @@
  * Utility functions
  */
 
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+/**
+ * Merge Tailwind CSS classes
+ */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
 /**
  * Format folder name for display
  * Converts kebab-case to Title Case

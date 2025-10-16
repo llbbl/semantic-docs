@@ -79,7 +79,8 @@ export const POST: APIRoute = async ({ request }) => {
       limit: sanitizedLimit,
       embeddingOptions: {
         provider:
-          ((import.meta.env.EMBEDDING_PROVIDER || process.env.EMBEDDING_PROVIDER) as 'local' | 'gemini' | 'openai') ||
+          ((import.meta.env.EMBEDDING_PROVIDER ||
+            process.env.EMBEDDING_PROVIDER) as 'local' | 'gemini' | 'openai') ||
           'local',
       },
     });
