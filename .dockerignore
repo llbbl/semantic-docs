@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+
+# Build output
+dist/
+.astro/
+
+# Local development
+.env
+.env.local
+# local.db is created during build
+
+# Version control
+.git/
+.gitignore
+
+# Documentation
+docs/
+README.md
+CLAUDE.md
+
+# Scripts (needed for build-time database initialization)
+# scripts/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+coverage/
+
+# CI/CD
+.github/
