@@ -34,6 +34,29 @@ if (!article) {
   return Astro.redirect('/404');
 }
 
+// Configure marked to add IDs to headings and handle external links
+marked.use({
+  renderer: {
+    heading({ tokens, depth }) {
+      const text = this.parser.parseInline(tokens);
+      const id = text.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+      return `<h${depth} id="${id}">${text}</h${depth}>`;
+    },
+    link({ href, title, tokens }) {
+      const text = this.parser.parseInline(tokens);
+      const titleAttr = title ? ` title="${title}"` : '';
+
+      // Open external links in new tab
+      if (href?.startsWith('http://') || href?.startsWith('https://')) {
+        return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
+      }
+
+      // Internal links open in same tab
+      return `<a href="${href}"${titleAttr}>${text}</a>`;
+    }
+  }
+});
+
 // Convert markdown to HTML
 const htmlContent = await marked(article.content);
 
@@ -187,12 +210,16 @@ const tags = article.tags;
   .article-content :global(a) {
     color: var(--primary);
     text-decoration: underline;
-    text-decoration-color: var(--border);
+    text-decoration-color: var(--primary);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 2px;
+    font-weight: 500;
     transition: all 0.2s;
   }
 
   .article-content :global(a:hover) {
-    text-decoration-color: var(--primary);
+    text-decoration-thickness: 3px;
+    opacity: 0.8;
   }
 
   .article-content :global(blockquote) {
