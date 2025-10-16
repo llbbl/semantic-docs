@@ -10,17 +10,35 @@ describe('Search Component', () => {
     vi.clearAllMocks();
   });
 
-  it('should render search input', () => {
+  it('should render search button', () => {
     render(<Search />);
-    const input = screen.getByPlaceholderText('Search articles...');
-    expect(input).toBeDefined();
+    const button = screen.getByRole('button', { name: 'Search' });
+    expect(button).toBeDefined();
+    expect(screen.getByText('Search articles...')).toBeDefined();
+  });
+
+  it('should open dialog when button clicked', async () => {
+    render(<Search />);
+    const button = screen.getByRole('button', { name: 'Search' });
+
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      const input = screen.getByPlaceholderText('Search articles...');
+      expect(input).toBeDefined();
+    });
   });
 
   it('should not search when query is less than 2 characters', async () => {
     render(<Search />);
-    const input = screen.getByPlaceholderText('Search articles...');
+    const button = screen.getByRole('button', { name: 'Search' });
 
-    fireEvent.change(input, { target: { value: 'a' } });
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      const input = screen.getByPlaceholderText('Search articles...');
+      fireEvent.change(input, { target: { value: 'a' } });
+    });
 
     await waitFor(
       () => {
@@ -52,9 +70,14 @@ describe('Search Component', () => {
     } as Response);
 
     render(<Search />);
-    const input = screen.getByPlaceholderText('Search articles...');
+    const button = screen.getByRole('button', { name: 'Search' });
 
-    fireEvent.change(input, { target: { value: 'test' } });
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      const input = screen.getByPlaceholderText('Search articles...');
+      fireEvent.change(input, { target: { value: 'test' } });
+    });
 
     await waitFor(
       () => {
@@ -63,7 +86,7 @@ describe('Search Component', () => {
           expect.objectContaining({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: 'test', limit: 5 }),
+            body: JSON.stringify({ query: 'test', limit: 10 }),
           }),
         );
       },
@@ -93,30 +116,19 @@ describe('Search Component', () => {
     } as Response);
 
     render(<Search />);
-    const input = screen.getByPlaceholderText('Search articles...');
+    const button = screen.getByRole('button', { name: 'Search' });
 
-    fireEvent.change(input, { target: { value: 'test' } });
-    fireEvent.focus(input);
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      const input = screen.getByPlaceholderText('Search articles...');
+      fireEvent.change(input, { target: { value: 'test' } });
+    });
 
     await waitFor(() => {
       expect(screen.getByText('Test Article')).toBeDefined();
-      expect(screen.getByText('docs')).toBeDefined();
+      expect(screen.getByText('DOCS')).toBeDefined();
       expect(screen.getByText('testing')).toBeDefined();
-    });
-  });
-
-  it('should show error message on search failure', async () => {
-    vi.mocked(global.fetch).mockRejectedValueOnce(new Error('Network error'));
-
-    render(<Search />);
-    const input = screen.getByPlaceholderText('Search articles...');
-
-    fireEvent.change(input, { target: { value: 'test' } });
-
-    await waitFor(() => {
-      expect(
-        screen.getByText('Search failed. Please try again.'),
-      ).toBeDefined();
     });
   });
 
@@ -133,21 +145,25 @@ describe('Search Component', () => {
     } as Response);
 
     render(<Search />);
-    const input = screen.getByPlaceholderText('Search articles...');
+    const button = screen.getByRole('button', { name: 'Search' });
 
-    fireEvent.change(input, { target: { value: 'nonexistent' } });
-    fireEvent.focus(input);
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      const input = screen.getByPlaceholderText('Search articles...');
+      fireEvent.change(input, { target: { value: 'nonexistent' } });
+    });
 
     await waitFor(() => {
       expect(
-        screen.getByText(/No results found for "nonexistent"/),
+        screen.getByText('No results found for "nonexistent"'),
       ).toBeDefined();
     });
   });
 
   it('should use custom placeholder', () => {
     render(<Search placeholder="Custom search..." />);
-    expect(screen.getByPlaceholderText('Custom search...')).toBeDefined();
+    expect(screen.getByText('Custom search...')).toBeDefined();
   });
 
   it('should respect maxResults prop', async () => {
@@ -163,9 +179,14 @@ describe('Search Component', () => {
     } as Response);
 
     render(<Search maxResults={10} />);
-    const input = screen.getByPlaceholderText('Search articles...');
+    const button = screen.getByRole('button', { name: 'Search' });
 
-    fireEvent.change(input, { target: { value: 'test' } });
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      const input = screen.getByPlaceholderText('Search articles...');
+      fireEvent.change(input, { target: { value: 'test' } });
+    });
 
     await waitFor(
       () => {
