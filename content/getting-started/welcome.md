@@ -16,6 +16,15 @@ This theme includes:
 - 🎨 **Dark Mode** - Easy on the eyes
 - 📑 **Auto TOC** - Table of contents generated automatically
 
+## Reference Implementation
+
+Check out the live reference implementation to see semantic-docs in action:
+
+- 🌐 **Live Demo**: [vault.llbbl.com](https://vault.llbbl.com/)
+- 💻 **Source Code**: [github.com/llbbl/astro-vault](https://github.com/llbbl/astro-vault)
+
+The reference implementation showcases all features and provides a complete example of how to structure your documentation.
+
 ## Getting Started
 
 1. Add your markdown files to the `content/` directory
