@@ -71,7 +71,6 @@ try {
     process.exit(1);
   }
 } catch (error) {
-  logger.error('Database initialization failed');
-  console.error(error);
+  logger.error('Database initialization failed:', error);
   process.exit(1);
 }
