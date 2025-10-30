@@ -160,17 +160,28 @@ To switch providers, update `.env` and ensure API keys are set. The dimension (7
 
 The project supports multiple deployment targets:
 
-### Cloudflare Workers (Recommended for Edge)
-```bash
-# Build with Cloudflare adapter and deploy
-pnpm deploy
+### Cloudflare Pages (Recommended for Edge)
 
-# Or manually
+**CI/Automatic Deployment:**
+1. Connect GitHub repo to Cloudflare Pages
+2. Configure in Pages dashboard:
+   - Build command: `pnpm build:cloudflare`
+   - Build output directory: `dist`
+   - Deploy command: **Leave empty** (Pages deploys automatically)
+3. Set environment variables in Pages settings
+4. Push to main branch - automatic build and deploy
+
+**Manual/Local Deployment:**
+```bash
+# Build and deploy in one command
+pnpm deploy:cloudflare
+
+# Or step by step
 pnpm build:cloudflare
-npx wrangler deploy
+npx wrangler pages deploy dist
 ```
 
-Configuration in `wrangler.toml` specifies the project name and build output directory. Cloudflare Workers provide global edge deployment with minimal cold starts.
+Configuration in `wrangler.toml` specifies the project name and build output directory. Cloudflare Pages provides global edge deployment with minimal cold starts.
 
 ### Node.js Platforms (Vercel, Netlify, etc.)
 ```bash
@@ -189,6 +200,7 @@ The default build uses the Node.js adapter for maximum compatibility with tradit
 - **Always run** `pnpm index` (or `pnpm index:local` for testing) before deploying to ensure content is indexed
 - Set environment variables (`TURSO_DB_URL`, `TURSO_AUTH_TOKEN`, etc.) in your deployment platform
 - Both adapters support the same features; choose based on deployment target
+- **Cloudflare Pages CI**: Don't configure a deploy command - Pages handles deployment automatically after build
 
 ### Known Issues & Workarounds
 

@@ -1,6 +1,11 @@
+# Wrangler configuration for Cloudflare Pages
+# This file is used for manual/local deployments via `pnpm deploy:cloudflare`
+# For CI deployments, configure build settings in the Cloudflare Pages dashboard
+
 name = "semantic-docs"
-compatibility_date = "2024-01-01"
+compatibility_date = "2025-01-01"
 pages_build_output_dir = "./dist"
 
-[env.production]
-name = "semantic-docs"
+# Note: Environment variables should be set in:
+# - Cloudflare Pages dashboard (for CI deployments)
+# - wrangler secret put <NAME> (for manual deployments)

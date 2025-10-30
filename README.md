@@ -178,28 +178,34 @@ semantic-docs/
 
 ## Deployment
 
-### Cloudflare Workers (Recommended)
+### Cloudflare Pages (Recommended)
 
-Deploy to the edge for global performance:
+#### Automatic CI Deployment
+
+1. **Connect repository** to Cloudflare Pages
+2. **Configure build settings** in Cloudflare Pages dashboard:
+   - **Framework preset**: None
+   - **Build command**: `pnpm build:cloudflare`
+   - **Build output directory**: `dist`
+   - **Root directory**: `/` (leave empty)
+   - **Deploy command**: **Leave empty** (Pages deploys automatically)
+3. **Set environment variables** in Pages dashboard:
+   - `TURSO_DB_URL`
+   - `TURSO_AUTH_TOKEN`
+   - `EMBEDDING_PROVIDER` (optional: local, gemini, or openai)
+4. **Push to main** - Pages builds and deploys automatically ✅
+
+#### Manual/Local Deployment
+
+For one-off deployments from your machine:
 
 ```bash
-# One-command deploy (builds + deploys)
+# One command: build + deploy
 pnpm deploy:cloudflare
 
-# Or manually
+# Or step by step
 pnpm build:cloudflare
-npx wrangler deploy
-```
-
-**Setup:**
-1. Install wrangler: `npm i -g wrangler`
-2. Login: `wrangler login`
-3. Deploy: `pnpm deploy`
-
-Environment variables can be set via:
-```bash
-wrangler secret put TURSO_DB_URL
-wrangler secret put TURSO_AUTH_TOKEN
+npx wrangler pages deploy dist
 ```
 
 ### Vercel
