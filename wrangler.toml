@@ -1,11 +1,13 @@
-# Wrangler configuration for Cloudflare Pages
-# This file is used for manual/local deployments via `pnpm deploy:cloudflare`
-# For CI deployments, configure build settings in the Cloudflare Pages dashboard
-
+# Wrangler configuration for Cloudflare Workers
 name = "semantic-docs"
+main = "dist/_worker.js/index.js"
 compatibility_date = "2025-01-01"
-pages_build_output_dir = "./dist"
+compatibility_flags = ["nodejs_compat"]
 
-# Note: Environment variables should be set in:
-# - Cloudflare Pages dashboard (for CI deployments)
-# - wrangler secret put <NAME> (for manual deployments)
+# Assets from the dist folder
+[site]
+bucket = "./dist"
+
+# Environment variables for production
+# Set via: wrangler secret put <NAME>
+# Or add them here (not recommended for sensitive data)
