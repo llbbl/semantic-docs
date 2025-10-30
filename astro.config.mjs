@@ -11,9 +11,10 @@ import { defineConfig } from 'astro/config';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Choose adapter based on environment
-const adapter = process.env.ADAPTER === 'cloudflare'
-  ? cloudflare()
-  : node({ mode: 'standalone' });
+const adapter =
+  process.env.ADAPTER === 'cloudflare'
+    ? cloudflare()
+    : node({ mode: 'standalone' });
 
 // https://astro.build/config
 export default defineConfig({
