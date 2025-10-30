@@ -25,7 +25,9 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "build:cloudflare": "ADAPTER=cloudflare astro build",
     "preview": "astro preview",
+    "deploy:cloudflare": "pnpm build:cloudflare && npx wrangler deploy",
     "db:init": "tsx --env-file=.env scripts/init-db.ts",
     "db:init:local": "tsx scripts/init-db.ts",
     "index": "tsx --env-file=.env scripts/index-content.ts",
@@ -38,6 +40,7 @@
     "format": "biome format --write ."
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^12.6.10",
     "@astrojs/node": "^9.5.0",
     "@astrojs/react": "^4.4.0",
     "@libsql/client": "^0.15.15",

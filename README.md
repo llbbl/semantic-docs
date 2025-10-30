@@ -178,11 +178,35 @@ semantic-docs/
 
 ## Deployment
 
+### Cloudflare Workers (Recommended)
+
+Deploy to the edge for global performance:
+
+```bash
+# One-command deploy (builds + deploys)
+pnpm deploy:cloudflare
+
+# Or manually
+pnpm build:cloudflare
+npx wrangler deploy
+```
+
+**Setup:**
+1. Install wrangler: `npm i -g wrangler`
+2. Login: `wrangler login`
+3. Deploy: `pnpm deploy`
+
+Environment variables can be set via:
+```bash
+wrangler secret put TURSO_DB_URL
+wrangler secret put TURSO_AUTH_TOKEN
+```
+
 ### Vercel
 
 ```bash
-# Install Vercel CLI
-npm i -g vercel
+# Build with Node.js adapter (default)
+pnpm build
 
 # Deploy
 vercel
@@ -193,8 +217,8 @@ vercel
 ### Netlify
 
 ```bash
-# Install Netlify CLI
-npm i -g netlify-cli
+# Build with Node.js adapter (default)
+pnpm build
 
 # Deploy
 netlify deploy --prod
@@ -202,16 +226,11 @@ netlify deploy --prod
 # Add environment variables in Netlify dashboard
 ```
 
-### Cloudflare Pages
+### Other Node.js Platforms
 
-```bash
-# Build
-pnpm build
+The default `pnpm build` uses the Node.js adapter, compatible with any platform that supports Node.js applications.
 
-# Deploy dist/ folder via Cloudflare dashboard
-```
-
-**Important:** Run `pnpm index` before building to ensure content is indexed.
+**Important:** Always run `pnpm index` before deploying to ensure content is indexed.
 
 ## Content Organization
 

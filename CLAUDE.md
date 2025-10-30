@@ -16,8 +16,14 @@ pnpm install
 # Start dev server (runs on http://localhost:4321)
 pnpm dev
 
-# Build for production
+# Build for production (Node.js adapter)
 pnpm build
+
+# Build for Cloudflare Workers
+pnpm build:cloudflare
+
+# Deploy to Cloudflare Workers
+pnpm deploy
 
 # Preview production build
 pnpm preview
@@ -80,12 +86,21 @@ Optional in `.env`:
 
 ## Critical Configuration
 
-### Server-Side Rendering + Node.js Adapter Required
-The search API endpoint requires SSR with a Node.js adapter. The configuration uses:
+### Server-Side Rendering + Dual Adapter Support
+The search API endpoint requires SSR with an adapter. The configuration uses:
 - `output: 'server'` - Enables server-side rendering
-- `adapter: node()` - Required for deployment (from @astrojs/node package)
+- **Dual adapter support** - Conditionally uses Node.js or Cloudflare adapter based on `ADAPTER` env var
+  - Default: `node({ mode: 'standalone' })` - For traditional Node.js deployments
+  - Cloudflare: `cloudflare()` - For Cloudflare Workers (set `ADAPTER=cloudflare`)
 - Article pages marked with `prerender: true` are pre-rendered as static HTML
 - Search API marked with `prerender: false` runs server-side
+
+**Adapter Selection** (astro.config.mjs:14-16):
+```js
+const adapter = process.env.ADAPTER === 'cloudflare'
+  ? cloudflare()
+  : node({ mode: 'standalone' });
+```
 
 **Never** remove the adapter or change output to 'static', or the search API will break.
 
@@ -140,3 +155,37 @@ To switch providers, update `.env` and ensure API keys are set. The dimension (7
 - Results limit enforcement: 1-20 results
 - Standard rate limit headers (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset)
 - See `docs/SECURITY.md` for comprehensive security considerations
+
+## Deployment Options
+
+The project supports multiple deployment targets:
+
+### Cloudflare Workers (Recommended for Edge)
+```bash
+# Build with Cloudflare adapter and deploy
+pnpm deploy
+
+# Or manually
+pnpm build:cloudflare
+npx wrangler deploy
+```
+
+Configuration in `wrangler.toml` specifies the project name and build output directory. Cloudflare Workers provide global edge deployment with minimal cold starts.
+
+### Node.js Platforms (Vercel, Netlify, etc.)
+```bash
+# Build with Node.js adapter (default)
+pnpm build
+
+# Deploy to your platform
+vercel deploy
+# or
+netlify deploy --prod
+```
+
+The default build uses the Node.js adapter for maximum compatibility with traditional hosting platforms.
+
+### Deployment Requirements
+- **Always run** `pnpm index` (or `pnpm index:local` for testing) before deploying to ensure content is indexed
+- Set environment variables (`TURSO_DB_URL`, `TURSO_AUTH_TOKEN`, etc.) in your deployment platform
+- Both adapters support the same features; choose based on deployment target
