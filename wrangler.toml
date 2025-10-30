@@ -1,5 +1,5 @@
 # Wrangler configuration for Cloudflare Workers
-name = "semantic-docs"
+name = "semantic"
 main = "dist/_worker.js/index.js"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
