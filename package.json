@@ -27,7 +27,7 @@
     "build": "astro build",
     "build:cloudflare": "ADAPTER=cloudflare astro build",
     "preview": "astro preview",
-    "deploy:cloudflare": "pnpm build:cloudflare && npx wrangler deploy",
+    "deploy:cloudflare": "pnpm build:cloudflare && npx wrangler pages deploy dist",
     "db:init": "tsx --env-file=.env scripts/init-db.ts",
     "db:init:local": "tsx scripts/init-db.ts",
     "index": "tsx --env-file=.env scripts/index-content.ts",
