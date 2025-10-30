@@ -49,5 +49,14 @@ export default defineConfig({
         '@': path.resolve(__dirname, './src'),
       },
     },
+    define: {
+      // Polyfill 'self' for ONNX runtime during SSR builds
+      self: 'globalThis',
+    },
+    ssr: {
+      // External packages that shouldn't be processed during SSR
+      external: ['onnxruntime-node'],
+      noExternal: ['@xenova/transformers'],
+    },
   },
 });
