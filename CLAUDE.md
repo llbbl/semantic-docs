@@ -189,3 +189,19 @@ The default build uses the Node.js adapter for maximum compatibility with tradit
 - **Always run** `pnpm index` (or `pnpm index:local` for testing) before deploying to ensure content is indexed
 - Set environment variables (`TURSO_DB_URL`, `TURSO_AUTH_TOKEN`, etc.) in your deployment platform
 - Both adapters support the same features; choose based on deployment target
+
+### Known Issues & Workarounds
+
+**JSR Package Import Paths**: The JSR-published versions of `@logan/libsql-search` and `@logan/logger` have incorrect relative import paths (e.g., `./@google/generative-ai` instead of `@google/generative-ai`).
+
+**Workaround in astro.config.mjs**:
+- Custom Vite plugin `fixJSRImports()` corrects these paths at build time (lines 19-37)
+- Required dependencies: `@google/generative-ai`, `openai`, `winston` (installed in package.json)
+
+**Permanent Fix Needed**:
+Update the source packages to use correct import paths:
+- `libsql-search/src/embeddings.ts`: Change `./@google/generative-ai` → `@google/generative-ai`
+- `libsql-search/src/embeddings.ts`: Change `./openai` → `openai`
+- `logger/src/runtime/node.ts`: Change `./winston` → `winston`
+
+Once fixed upstream, the Vite plugin and explicit dependencies can be removed.

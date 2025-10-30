@@ -16,13 +16,34 @@ const adapter =
     ? cloudflare()
     : node({ mode: 'standalone' });
 
+// Vite plugin to fix JSR package import paths
+function fixJSRImports() {
+  return {
+    name: 'fix-jsr-imports',
+    resolveId(/** @type {string} */ source) {
+      // Fix incorrect relative imports from JSR packages
+      /** @type {Record<string, string>} */
+      const fixMap = {
+        './@google/generative-ai': '@google/generative-ai',
+        './openai': 'openai',
+        './winston': 'winston',
+      };
+
+      if (fixMap[source]) {
+        return { id: fixMap[source], external: true };
+      }
+      return null;
+    },
+  };
+}
+
 // https://astro.build/config
 export default defineConfig({
   output: 'server',
   adapter,
   integrations: [react()],
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [tailwindcss(), fixJSRImports()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
