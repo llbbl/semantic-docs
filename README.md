@@ -178,37 +178,33 @@ semantic-docs/
 
 ## Deployment
 
-### Cloudflare Pages (Recommended)
+> **Note**: Cloudflare Workers/Pages deployment support is currently in development on the `cloudflare-workers` branch.
 
-#### Automatic CI Deployment
+### Container-Based Platforms (Recommended)
 
-1. **Connect repository** to Cloudflare Pages
-2. **Configure build settings** in Cloudflare Pages dashboard:
-   - **Framework preset**: None
-   - **Build command**: `pnpm build:cloudflare`
-   - **Build output directory**: `dist`
-   - **Root directory**: `/` (leave empty)
-   - **Deploy command**: **Leave empty** (Pages deploys automatically)
-3. **Set environment variables** in Pages dashboard:
-   - `TURSO_DB_URL`
-   - `TURSO_AUTH_TOKEN`
-   - `EMBEDDING_PROVIDER` (optional: local, gemini, or openai)
-4. **Push to main** - Pages builds and deploys automatically ✅
+This project is designed to run on platforms that support Docker containers, such as:
 
-#### Manual/Local Deployment
-
-For one-off deployments from your machine:
+- [Railway](https://railway.app)
+- [Render](https://render.com)
+- [Fly.io](https://fly.io)
+- Google Cloud Run
+- AWS ECS/Fargate
+- Azure Container Apps
+- Coolify
 
 ```bash
-# One command: build + deploy
-pnpm deploy:cloudflare
+# Build with Node.js adapter (default)
+pnpm build
 
-# Or step by step
-pnpm build:cloudflare
-npx wrangler pages deploy dist
+# The built application runs on Node.js and can be containerized
+# Set environment variables in your platform's dashboard
 ```
 
-### Vercel
+**Important:** Always run `pnpm index` before deploying to ensure content is indexed.
+
+### Vercel / Netlify
+
+> **Note**: These platforms have not been tested and cannot be recommended at this time.
 
 ```bash
 # Build with Node.js adapter (default)
@@ -216,27 +212,11 @@ pnpm build
 
 # Deploy
 vercel
-
-# Add environment variables in Vercel dashboard
-```
-
-### Netlify
-
-```bash
-# Build with Node.js adapter (default)
-pnpm build
-
-# Deploy
+# or
 netlify deploy --prod
 
-# Add environment variables in Netlify dashboard
+# Add environment variables in platform dashboard
 ```
-
-### Other Node.js Platforms
-
-The default `pnpm build` uses the Node.js adapter, compatible with any platform that supports Node.js applications.
-
-**Important:** Always run `pnpm index` before deploying to ensure content is indexed.
 
 ## Content Organization
 

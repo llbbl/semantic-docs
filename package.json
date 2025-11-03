@@ -25,9 +25,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "build:cloudflare": "ADAPTER=cloudflare astro build",
     "preview": "astro preview",
-    "deploy:cloudflare": "npx wrangler deploy",
     "db:init": "tsx --env-file=.env scripts/init-db.ts",
     "db:init:local": "tsx scripts/init-db.ts",
     "index": "tsx --env-file=.env scripts/index-content.ts",
@@ -40,7 +38,6 @@
     "format": "biome format --write ."
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^12.6.10",
     "@astrojs/node": "^9.5.0",
     "@astrojs/react": "^4.4.0",
     "@google/generative-ai": "^0.24.1",
@@ -73,8 +70,7 @@
     "happy-dom": "^20.0.1",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4",
-    "wrangler": "^4.45.3"
+    "vitest": "^3.2.4"
   },
   "pnpm": {
     "allowedBuilds": [

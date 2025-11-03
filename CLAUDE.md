@@ -16,14 +16,8 @@ pnpm install
 # Start dev server (runs on http://localhost:4321)
 pnpm dev
 
-# Build for production (Node.js adapter)
+# Build for production
 pnpm build
-
-# Build for Cloudflare Workers
-pnpm build:cloudflare
-
-# Deploy to Cloudflare Workers
-pnpm deploy
 
 # Preview production build
 pnpm preview
@@ -158,34 +152,14 @@ To switch providers, update `.env` and ensure API keys are set. The dimension (7
 
 ## Deployment Options
 
-The project supports multiple deployment targets:
-
-### Cloudflare Pages (Recommended for Edge)
-
-**CI/Automatic Deployment:**
-1. Connect GitHub repo to Cloudflare Pages
-2. Configure in Pages dashboard:
-   - Build command: `pnpm build:cloudflare`
-   - Build output directory: `dist`
-   - Deploy command: **Leave empty** (Pages deploys automatically)
-3. Set environment variables in Pages settings
-4. Push to main branch - automatic build and deploy
-
-**Manual/Local Deployment:**
-```bash
-# Build and deploy in one command
-pnpm deploy:cloudflare
-
-# Or step by step
-pnpm build:cloudflare
-npx wrangler pages deploy dist
-```
-
-Configuration in `wrangler.toml` specifies the project name and build output directory. Cloudflare Pages provides global edge deployment with minimal cold starts.
+> **Note**: Cloudflare Workers/Pages deployment is being developed in the `cloudflare-workers` branch.
 
 ### Node.js Platforms (Vercel, Netlify, etc.)
+
+The project uses the Node.js adapter and can be deployed to any platform supporting Node.js:
+
 ```bash
-# Build with Node.js adapter (default)
+# Build
 pnpm build
 
 # Deploy to your platform
@@ -194,26 +168,6 @@ vercel deploy
 netlify deploy --prod
 ```
 
-The default build uses the Node.js adapter for maximum compatibility with traditional hosting platforms.
-
 ### Deployment Requirements
 - **Always run** `pnpm index` (or `pnpm index:local` for testing) before deploying to ensure content is indexed
-- Set environment variables (`TURSO_DB_URL`, `TURSO_AUTH_TOKEN`, etc.) in your deployment platform
-- Both adapters support the same features; choose based on deployment target
-- **Cloudflare Pages CI**: Don't configure a deploy command - Pages handles deployment automatically after build
-
-### Known Issues & Workarounds
-
-**JSR Package Import Paths**: The JSR-published versions of `@logan/libsql-search` and `@logan/logger` have incorrect relative import paths (e.g., `./@google/generative-ai` instead of `@google/generative-ai`).
-
-**Workaround in astro.config.mjs**:
-- Custom Vite plugin `fixJSRImports()` corrects these paths at build time (lines 19-37)
-- Required dependencies: `@google/generative-ai`, `openai`, `winston` (installed in package.json)
-
-**Permanent Fix Needed**:
-Update the source packages to use correct import paths:
-- `libsql-search/src/embeddings.ts`: Change `./@google/generative-ai` → `@google/generative-ai`
-- `libsql-search/src/embeddings.ts`: Change `./openai` → `openai`
-- `logger/src/runtime/node.ts`: Change `./winston` → `winston`
-
-Once fixed upstream, the Vite plugin and explicit dependencies can be removed.
+- Set environment variables (`TURSO_DB_URL`, `TURSO_AUTH_TOKEN`, etc.) in your deployment platform's dashboard
