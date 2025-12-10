@@ -27,8 +27,8 @@ importers:
         specifier: jsr:^0.1.3
         version: '@jsr/logan__libsql-search@0.1.3'
       '@logan/logger':
-        specifier: jsr:^1.1.11
-        version: '@jsr/logan__logger@1.1.11'
+        specifier: jsr:^1.1.12
+        version: '@jsr/logan__logger@1.1.12'
       '@radix-ui/react-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -606,8 +606,8 @@ packages:
   '@jsr/logan__libsql-search@0.1.3':
     resolution: {integrity: sha512-k2r+b3dmqitE3bgFEDeSvq4vL8gRqELwJ11INdcnN5X/oc0GSDaXs3YuxpkDhK5nmVU0Z/00HuJ9xA5DDZOVkQ==, tarball: https://npm.jsr.io/~/11/@jsr/logan__libsql-search/0.1.3.tgz}
 
-  '@jsr/logan__logger@1.1.11':
-    resolution: {integrity: sha512-7otv7mPujxFI8y2q7URt7kyOFXh3JpXpnv2ukoahuAjJc42TFbXfgEYzOfwivLwACDuQ4nxLVN8dQzuzs+7gcw==, tarball: https://npm.jsr.io/~/11/@jsr/logan__logger/1.1.11.tgz}
+  '@jsr/logan__logger@1.1.12':
+    resolution: {integrity: sha512-glpHP/D5YXhahcj/faUwpHuh6oUHgMLR3Ca4dyFkx9dGk1RrE0yA0DUjWLsEWr7l85JE9Lw86JORyyhJjGpdbg==, tarball: https://npm.jsr.io/~/11/@jsr/logan__logger/1.1.12.tgz}
 
   '@libsql/client@0.15.15':
     resolution: {integrity: sha512-twC0hQxPNHPKfeOv3sNT6u2pturQjLcI+CnpTM0SjRpocEGgfiZ7DWKXLNnsothjyJmDqEsBQJ5ztq9Wlu470w==}
@@ -3342,7 +3342,7 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@jsr/logan__logger@1.1.11': {}
+  '@jsr/logan__logger@1.1.12': {}
 
   '@libsql/client@0.15.15':
     dependencies:
