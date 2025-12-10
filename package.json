@@ -47,7 +47,7 @@
     "@logan/logger": "jsr:^1.1.12",
     "@radix-ui/react-dialog": "^1.1.15",
     "@tailwindcss/vite": "^4.1.14",
-    "astro": "^5.14.5",
+    "astro": "^5.15.3",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "lucide-react": "^0.546.0",
