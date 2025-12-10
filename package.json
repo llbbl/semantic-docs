@@ -14,6 +14,7 @@
   ],
   "author": "llbbl",
   "license": "MIT",
+  "packageManager": "pnpm@10.20.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/llbbl/semantic-docs.git"
@@ -43,7 +44,7 @@
     "@google/generative-ai": "^0.24.1",
     "@libsql/client": "^0.15.15",
     "@logan/libsql-search": "jsr:^0.1.3",
-    "@logan/logger": "jsr:^1.1.11",
+    "@logan/logger": "jsr:^1.1.12",
     "@radix-ui/react-dialog": "^1.1.15",
     "@tailwindcss/vite": "^4.1.14",
     "astro": "^5.14.5",
