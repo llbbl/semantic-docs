@@ -69,7 +69,7 @@
     "@vitest/browser": "^3.2.4",
     "@vitest/ui": "^3.2.4",
     "happy-dom": "^20.0.1",
-    "tsx": "^4.20.6",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },
