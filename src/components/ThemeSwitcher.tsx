@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { defaultTheme, type Theme, themes } from '../config/themes';
+import { defaultTheme, type Theme, themes } from '@/config/themes';
 
 export default function ThemeSwitcher() {
   const [currentTheme, setCurrentTheme] = useState(defaultTheme);
