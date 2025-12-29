@@ -1,6 +1,14 @@
 /**
  * Theme Configuration
  * Define custom color themes here
+ *
+ * CSS Variable Naming Convention:
+ * Color keys use camelCase here (e.g., cardForeground, sidebarPrimary).
+ * ThemeSwitcher.tsx converts these to kebab-case CSS variables:
+ *   cardForeground -> --card-foreground
+ *   sidebarPrimary -> --sidebar-primary
+ *
+ * These must match the CSS variable names used in global.css and Tailwind config.
  */
 
 export interface Theme {
@@ -281,3 +289,21 @@ export const themes: Theme[] = [
 ];
 
 export const defaultTheme = 'dark';
+
+export type FoucColors = Pick<
+  Theme['colors'],
+  'background' | 'foreground' | 'header' | 'sidebar' | 'toc'
+>;
+
+export const foucThemes: Record<string, FoucColors> = Object.fromEntries(
+  themes.map((theme) => [
+    theme.name,
+    {
+      background: theme.colors.background,
+      foreground: theme.colors.foreground,
+      header: theme.colors.header,
+      sidebar: theme.colors.sidebar,
+      toc: theme.colors.toc,
+    },
+  ]),
+);

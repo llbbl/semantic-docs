@@ -171,3 +171,4 @@ netlify deploy --prod
 ### Deployment Requirements
 - **Always run** `pnpm index` (or `pnpm index:local` for testing) before deploying to ensure content is indexed
 - Set environment variables (`TURSO_DB_URL`, `TURSO_AUTH_TOKEN`, etc.) in your deployment platform's dashboard
+- only run "pnpm lint:fix" or "biome check --write ." if there are less than 5 files to be modified and the changes are simple, otherwise fix linter issues manually

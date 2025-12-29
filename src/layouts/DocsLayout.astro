@@ -4,6 +4,7 @@
  * Based on modern docs UI with header, sidebar, content, and TOC
  */
 import '../styles/global.css';
+import { defaultTheme, foucThemes } from '@/config/themes';
 
 interface Props {
   title?: string;
@@ -11,6 +12,9 @@ interface Props {
 }
 
 const { title = 'Astro Vault', description = 'Documentation' } = Astro.props;
+
+// Generate FOUC prevention script from themes.ts
+const foucScript = `(function(){var t=localStorage.getItem('theme')||'${defaultTheme}',c=${JSON.stringify(foucThemes)}[t];if(c){var d=document.documentElement.style;d.setProperty('--background',c.background);d.setProperty('--foreground',c.foreground);d.setProperty('--header',c.header);d.setProperty('--sidebar',c.sidebar);d.setProperty('--toc',c.toc)}})();`;
 ---
 
 <!doctype html>
@@ -22,64 +26,7 @@ const { title = 'Astro Vault', description = 'Documentation' } = Astro.props;
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
-    <script is:inline>
-      // Initialize theme immediately to prevent flash
-      (function() {
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        const themes = {
-          dark: {
-            background: '#1a1a1a',
-            foreground: '#fafafa',
-            header: '#141414',
-            sidebar: '#0f0f0f',
-            toc: '#262626'
-          },
-          light: {
-            background: '#ffffff',
-            foreground: '#171717',
-            header: '#f5f5f5',
-            sidebar: '#f9fafb',
-            toc: '#fafafa'
-          },
-          ocean: {
-            background: '#0a1628',
-            foreground: '#e0f2fe',
-            header: '#0a1a2e',
-            sidebar: '#071220',
-            toc: '#0f2942'
-          },
-          forest: {
-            background: '#0f1e13',
-            foreground: '#d1fae5',
-            header: '#0d1a11',
-            sidebar: '#0a140d',
-            toc: '#14291a'
-          },
-          sunset: {
-            background: '#1c0f0a',
-            foreground: '#fef3c7',
-            header: '#1a0d08',
-            sidebar: '#110a07',
-            toc: '#2a1510'
-          },
-          purple: {
-            background: '#1a0a1f',
-            foreground: '#f3e8ff',
-            header: '#15091c',
-            sidebar: '#0f0514',
-            toc: '#241129'
-          },
-        };
-        const theme = themes[savedTheme];
-        if (theme) {
-          document.documentElement.style.setProperty('--background', theme.background);
-          document.documentElement.style.setProperty('--foreground', theme.foreground);
-          document.documentElement.style.setProperty('--header', theme.header);
-          document.documentElement.style.setProperty('--sidebar', theme.sidebar);
-          document.documentElement.style.setProperty('--toc', theme.toc);
-        }
-      })();
-    </script>
+    <script is:inline set:html={foucScript} />
   </head>
   <body class="min-h-screen">
     <slot />

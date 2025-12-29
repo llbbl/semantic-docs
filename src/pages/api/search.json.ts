@@ -6,11 +6,8 @@
 import { search } from '@logan/libsql-search';
 import { logger } from '@logan/logger';
 import type { APIRoute } from 'astro';
-import { getTursoClient } from '../../lib/turso';
-import {
-  checkRateLimit,
-  createRateLimitHeaders,
-} from '../../middleware/rateLimit';
+import { getTursoClient } from '@/lib/turso';
+import { checkRateLimit, createRateLimitHeaders } from '@/middleware/rateLimit';
 
 export const prerender = false;
 

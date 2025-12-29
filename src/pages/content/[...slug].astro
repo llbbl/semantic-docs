@@ -2,12 +2,23 @@
 export const prerender = true;
 
 import { getAllArticles, getArticleBySlug } from '@logan/libsql-search';
-import { marked } from 'marked';
-import DocsHeader from '../../components/DocsHeader.astro';
-import DocsSidebar from '../../components/DocsSidebar.astro';
-import DocsToc from '../../components/DocsToc.tsx';
-import DocsLayout from '../../layouts/DocsLayout.astro';
-import { getTursoClient } from '../../lib/turso';
+import DocsHeader from '@/components/DocsHeader.astro';
+import DocsSidebar from '@/components/DocsSidebar.astro';
+import DocsToc from '@/components/DocsToc.tsx';
+import DocsLayout from '@/layouts/DocsLayout.astro';
+import { marked } from '@/lib/markdown';
+import { getTursoClient } from '@/lib/turso';
+
+interface Article {
+  id: number;
+  slug: string;
+  title: string;
+  folder: string | null;
+  tags: string[];
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
 
 // Generate static paths for all articles at build time
 export async function getStaticPaths() {
@@ -16,11 +27,13 @@ export async function getStaticPaths() {
 
   return allArticles.map((article) => ({
     params: { slug: article.slug },
+    props: { allArticles },
   }));
 }
 
 // Get the slug from the URL
 const { slug } = Astro.params;
+const { allArticles } = Astro.props as { allArticles: Article[] };
 
 if (!slug) {
   return Astro.redirect('/');
@@ -34,32 +47,6 @@ if (!article) {
   return Astro.redirect('/404');
 }
 
-// Configure marked to add IDs to headings and handle external links
-marked.use({
-  renderer: {
-    heading({ tokens, depth }) {
-      const text = this.parser.parseInline(tokens);
-      const id = text
-        .toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^\w-]/g, '');
-      return `<h${depth} id="${id}">${text}</h${depth}>`;
-    },
-    link({ href, title, tokens }) {
-      const text = this.parser.parseInline(tokens);
-      const titleAttr = title ? ` title="${title}"` : '';
-
-      // Open external links in new tab
-      if (href?.startsWith('http://') || href?.startsWith('https://')) {
-        return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
-      }
-
-      // Internal links open in same tab
-      return `<a href="${href}"${titleAttr}>${text}</a>`;
-    },
-  },
-});
-
 // Convert markdown to HTML
 const htmlContent = await marked(article.content);
 
@@ -71,7 +58,7 @@ const tags = article.tags;
   <DocsHeader />
 
   <div class="flex">
-    <DocsSidebar />
+    <DocsSidebar articles={allArticles} />
 
     <main class="flex-1 lg:pl-64 xl:pr-64 min-w-0 relative z-10">
       <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">

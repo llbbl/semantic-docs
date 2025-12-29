@@ -3,16 +3,36 @@
  * Docs Sidebar Component
  * Collapsible navigation populated from Turso database
  */
-import { getAllArticles } from '@logan/libsql-search';
-import { getTursoClient } from '../lib/turso';
 
-const client = getTursoClient();
+interface Article {
+  id: number;
+  slug: string;
+  title: string;
+  folder: string | null;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+interface Props {
+  articles?: Article[];
+}
+
+import { getAllArticles } from '@logan/libsql-search';
+import { getTursoClient } from '@/lib/turso';
 
 // Get current path for active state
 const currentPath = Astro.url.pathname;
 
-// Fetch all articles and group by folder
-const allArticles = await getAllArticles(client);
+// Use provided articles or fetch from database
+let allArticles: Article[];
+if (Astro.props.articles) {
+  allArticles = Astro.props.articles;
+} else {
+  const client = getTursoClient();
+  allArticles = (await getAllArticles(client)) as Article[];
+}
+
 const articlesByFolder = allArticles.reduce(
   (acc, article) => {
     const folder = article.folder || 'root';
