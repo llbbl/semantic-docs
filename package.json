@@ -68,7 +68,7 @@
     "@types/react-dom": "^19.2.2",
     "@vitest/browser": "^3.2.4",
     "@vitest/ui": "^3.2.4",
-    "happy-dom": "^20.0.1",
+    "happy-dom": "^20.0.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
