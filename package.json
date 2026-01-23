@@ -1,6 +1,6 @@
 {
   "name": "semantic-docs",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Documentation theme with semantic vector search powered by libsql-search",
   "type": "module",
   "keywords": [
