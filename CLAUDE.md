@@ -172,3 +172,36 @@ netlify deploy --prod
 - **Always run** `pnpm index` (or `pnpm index:local` for testing) before deploying to ensure content is indexed
 - Set environment variables (`TURSO_DB_URL`, `TURSO_AUTH_TOKEN`, etc.) in your deployment platform's dashboard
 - only run "pnpm lint:fix" or "biome check --write ." if there are less than 5 files to be modified and the changes are simple, otherwise fix linter issues manually
+
+## Commit Message Convention
+
+This project uses **Conventional Commits**. All commits must follow this format:
+
+```
+<type>(<scope>): <description>
+```
+
+### Commit Types
+| Type | Use For |
+|------|---------|
+| `feat:` | New features |
+| `fix:` | Bug fixes |
+| `docs:` | Documentation changes |
+| `perf:` | Performance improvements |
+| `refactor:` | Code refactoring (no feature change) |
+| `test:` | Adding or updating tests |
+| `ci:` | CI/CD changes |
+| `chore:` | Maintenance tasks |
+
+### Examples
+```bash
+feat: add user authentication
+fix(api): handle rate limit errors
+docs: update installation guide
+chore: bump dependencies
+```
+
+### Release Process
+1. Make commits following the convention above
+2. Create and push a version tag: `git tag v1.2.3 && git push --tags`
+3. GitHub Actions will automatically generate changelog and create release
