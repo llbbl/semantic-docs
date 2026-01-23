@@ -9,9 +9,20 @@ import { defaultTheme, foucThemes } from '@/config/themes';
 interface Props {
   title?: string;
   description?: string;
+  image?: string;
 }
 
-const { title = 'Astro Vault', description = 'Documentation' } = Astro.props;
+const {
+  title = 'Astro Vault',
+  description = 'Documentation',
+  image,
+} = Astro.props;
+
+// Generate canonical and Open Graph URLs
+// Note: Configure 'site' in astro.config.mjs for production deployments
+const siteUrl = Astro.site || 'https://example.com';
+const canonicalURL = new URL(Astro.url.pathname, siteUrl);
+const ogImage = image ? new URL(image, siteUrl).href : undefined;
 
 // Generate FOUC prevention script from themes.ts
 const foucScript = `(function(){var t=localStorage.getItem('theme')||'${defaultTheme}',c=${JSON.stringify(foucThemes)}[t];if(c){var d=document.documentElement.style;d.setProperty('--background',c.background);d.setProperty('--foreground',c.foreground);d.setProperty('--header',c.header);d.setProperty('--sidebar',c.sidebar);d.setProperty('--toc',c.toc)}})();`;
@@ -26,6 +37,24 @@ const foucScript = `(function(){var t=localStorage.getItem('theme')||'${defaultT
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href={canonicalURL.href} />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalURL.href} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+    <meta name="twitter:url" content={canonicalURL.href} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    {ogImage && <meta name="twitter:image" content={ogImage} />}
+
     <script is:inline set:html={foucScript} />
   </head>
   <body class="min-h-screen">

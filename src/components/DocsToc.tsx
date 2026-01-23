@@ -65,12 +65,18 @@ export default function DocsToc() {
   }
 
   return (
-    <aside className="fixed top-14 right-0 z-30 hidden h-[calc(100vh-3.5rem)] w-64 shrink-0 overflow-y-auto border-l border-toc-border bg-toc xl:block">
+    <aside
+      className="fixed top-14 right-0 z-30 hidden h-[calc(100vh-3.5rem)] w-64 shrink-0 overflow-y-auto border-l border-toc-border bg-toc xl:block"
+      aria-label="Table of contents"
+    >
       <div className="py-6 px-6">
-        <h4 className="mb-4 text-sm font-semibold text-toc-foreground">
+        <h4
+          id="toc-heading"
+          className="mb-4 text-sm font-semibold text-toc-foreground"
+        >
           On this page
         </h4>
-        <nav>
+        <nav aria-labelledby="toc-heading">
           <ul className="space-y-2.5">
             {toc.map((item) => (
               <li key={item.id}>

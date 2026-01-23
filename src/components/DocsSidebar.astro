@@ -62,23 +62,19 @@ function formatFolderName(folder: string): string {
   <div class="py-6 px-6">
     <nav class="space-y-2">
       {Object.entries(articlesByFolder).map(([folder, articles]) => (
-        <div class="mb-4" x-data="{ open: true }">
-          <button
-            @click="open = !open"
-            class="flex w-full items-center justify-between py-2 text-sm font-medium text-sidebar-foreground hover:text-sidebar-foreground/80 transition-colors"
-          >
+        <details open class="mb-4 group">
+          <summary class="flex w-full items-center justify-between py-2 text-sm font-medium text-sidebar-foreground hover:text-sidebar-foreground/80 transition-colors cursor-pointer list-none [&::-webkit-details-marker]:hidden">
             {formatFolderName(folder)}
             <svg
-              class="h-4 w-4 transition-transform"
-              :class="{ 'rotate-180': open }"
+              class="h-4 w-4 transition-transform group-open:rotate-180"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
             >
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
-          </button>
-          <div x-show="open" class="mt-2 space-y-1">
+          </summary>
+          <div class="mt-2 space-y-1">
             {articles.map((article) => {
               const href = `/content/${article.slug}`;
               const isActive = currentPath === href || currentPath.startsWith(href + '/');
@@ -98,18 +94,9 @@ function formatFolderName(folder: string): string {
               );
             })}
           </div>
-        </div>
+        </details>
       ))}
     </nav>
   </div>
 </aside>
 
-<!-- Alpine.js for collapsible sections -->
-<script is:inline>
-  if (typeof Alpine === 'undefined') {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js';
-    script.defer = true;
-    document.head.appendChild(script);
-  }
-</script>

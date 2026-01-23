@@ -82,23 +82,8 @@
       "sharp": "^0.34.4"
     },
     "onlyBuiltDependencies": [
-      "-",
-      "/",
-      "@",
-      "a",
-      "c",
-      "d",
-      "e",
-      "h",
-      "i",
-      "l",
-      "n",
-      "o",
-      "p",
-      "r",
       "sharp",
-      "t",
-      "u"
+      "@xenova/transformers"
     ]
   }
 }

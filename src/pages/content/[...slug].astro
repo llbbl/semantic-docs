@@ -4,7 +4,7 @@ export const prerender = true;
 import { getAllArticles, getArticleBySlug } from '@logan/libsql-search';
 import DocsHeader from '@/components/DocsHeader.astro';
 import DocsSidebar from '@/components/DocsSidebar.astro';
-import DocsToc from '@/components/DocsToc.tsx';
+import DocsTocWithErrorBoundary from '@/components/DocsTocWithErrorBoundary.tsx';
 import DocsLayout from '@/layouts/DocsLayout.astro';
 import { marked } from '@/lib/markdown';
 import { getTursoClient } from '@/lib/turso';
@@ -91,7 +91,7 @@ const tags = article.tags;
       </div>
     </main>
 
-    <DocsToc client:load />
+    <DocsTocWithErrorBoundary client:idle />
   </div>
 </DocsLayout>
 

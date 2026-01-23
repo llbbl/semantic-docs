@@ -3,7 +3,7 @@ export const prerender = true;
 
 import DocsHeader from '@/components/DocsHeader.astro';
 import DocsSidebar from '@/components/DocsSidebar.astro';
-import DocsToc from '@/components/DocsToc.tsx';
+import DocsTocWithErrorBoundary from '@/components/DocsTocWithErrorBoundary.tsx';
 import DocsLayout from '@/layouts/DocsLayout.astro';
 ---
 
@@ -45,6 +45,6 @@ import DocsLayout from '@/layouts/DocsLayout.astro';
       </div>
     </main>
 
-    <DocsToc client:load />
+    <DocsTocWithErrorBoundary client:idle />
   </div>
 </DocsLayout>

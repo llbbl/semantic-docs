@@ -23,7 +23,7 @@ interface SearchResult {
   distance: number;
 }
 
-interface SearchProps {
+export interface SearchProps {
   placeholder?: string;
   maxResults?: number;
 }

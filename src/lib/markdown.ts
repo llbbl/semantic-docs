@@ -1,5 +1,19 @@
 import { marked } from 'marked';
 
+/**
+ * Escapes HTML special characters to prevent XSS attacks
+ */
+function escapeHtml(text: string): string {
+  const htmlEscapes: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return text.replace(/[&<>"']/g, (char) => htmlEscapes[char]);
+}
+
 marked.use({
   renderer: {
     heading({ tokens, depth }) {
@@ -12,16 +26,18 @@ marked.use({
     },
     link({ href, title, tokens }) {
       const text = this.parser.parseInline(tokens);
-      const titleAttr = title ? ` title="${title}"` : '';
+      const escapedHref = escapeHtml(href || '');
+      const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
       if (href?.startsWith('http://') || href?.startsWith('https://')) {
-        return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
+        return `<a href="${escapedHref}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
       }
-      return `<a href="${href}"${titleAttr}>${text}</a>`;
+      return `<a href="${escapedHref}"${titleAttr}>${text}</a>`;
     },
     image({ href, title, text }) {
-      const alt = text || 'Image';
-      const titleAttr = title ? ` title="${title}"` : '';
-      return `<img src="${href}" alt="${alt}"${titleAttr} loading="lazy" />`;
+      const escapedAlt = escapeHtml(text || 'Image');
+      const escapedHref = escapeHtml(href || '');
+      const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
+      return `<img src="${escapedHref}" alt="${escapedAlt}"${titleAttr} loading="lazy" />`;
     },
   },
 });
