@@ -11,8 +11,17 @@
  * These must match the CSS variable names used in global.css and Tailwind config.
  */
 
+/** Theme name type - explicit union for type safety */
+export type ThemeName =
+  | 'dark'
+  | 'light'
+  | 'ocean'
+  | 'forest'
+  | 'sunset'
+  | 'purple';
+
 export interface Theme {
-  name: string;
+  name: ThemeName;
   label: string;
   colors: {
     background: string;
@@ -288,7 +297,17 @@ export const themes: Theme[] = [
   },
 ];
 
-export const defaultTheme = 'dark';
+/** List of all available theme names for runtime validation */
+export const themeNames: ThemeName[] = [
+  'dark',
+  'light',
+  'ocean',
+  'forest',
+  'sunset',
+  'purple',
+];
+
+export const defaultTheme: ThemeName = 'dark';
 
 export type FoucColors = Pick<
   Theme['colors'],

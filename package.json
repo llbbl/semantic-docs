@@ -55,6 +55,7 @@
     "openai": "^6.16.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "sanitize-html": "^2.17.0",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.18",
     "winston": "^3.19.0"
@@ -66,6 +67,7 @@
     "@types/node": "^24.10.2",
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
+    "@types/sanitize-html": "^2.16.0",
     "@vitest/browser": "^3.2.4",
     "@vitest/ui": "^3.2.4",
     "happy-dom": "^20.3.7",

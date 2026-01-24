@@ -3,7 +3,7 @@
  * Automatically generated from page headings
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface TocItem {
   id: string;
@@ -14,6 +14,19 @@ interface TocItem {
 export default function DocsToc() {
   const [toc, setToc] = useState<TocItem[]>([]);
   const [activeId, setActiveId] = useState<string>('');
+
+  // Stable callback for IntersectionObserver to prevent unnecessary re-renders
+  const handleIntersection = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          setActiveId(entry.target.id);
+          break; // Only set the first intersecting heading
+        }
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     // Extract headings from the page
@@ -34,21 +47,14 @@ export default function DocsToc() {
     setToc(items);
 
     // Set up intersection observer for active heading
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id);
-          }
-        });
-      },
-      { rootMargin: '-100px 0px -66%' },
-    );
+    const observer = new IntersectionObserver(handleIntersection, {
+      rootMargin: '-100px 0px -66%',
+    });
 
     headings.forEach((heading) => observer.observe(heading));
 
     return () => observer.disconnect();
-  }, []);
+  }, [handleIntersection]);
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();

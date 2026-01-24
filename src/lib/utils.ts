@@ -58,20 +58,32 @@ export function formatDate(date: string | Date): string {
 
 /**
  * Extract headings from HTML content for TOC
+ * Handles id attribute in any position within the tag
  */
 export function extractHeadings(
   html: string,
 ): Array<{ id: string; text: string; level: number }> {
-  const headingRegex = /<h([2-3])[^>]*id="([^"]*)"[^>]*>(.*?)<\/h\1>/gi;
+  // Match h2-h3 tags with any attributes, capture level and content
+  const headingRegex = /<h([2-3])([^>]*)>(.*?)<\/h\1>/gi;
+  // Separate regex to extract id from attributes
+  const idRegex = /\bid=["']([^"']*)["']/i;
   const headings: Array<{ id: string; text: string; level: number }> = [];
 
   let match;
   while ((match = headingRegex.exec(html)) !== null) {
-    headings.push({
-      level: parseInt(match[1], 10),
-      id: match[2],
-      text: match[3].replace(/<[^>]*>/g, '').trim(),
-    });
+    const level = parseInt(match[1], 10);
+    const attributes = match[2];
+    const content = match[3];
+
+    // Extract id from attributes (can be anywhere in the tag)
+    const idMatch = idRegex.exec(attributes);
+    if (idMatch) {
+      headings.push({
+        level,
+        id: idMatch[1],
+        text: content.replace(/<[^>]*>/g, '').trim(),
+      });
+    }
   }
 
   return headings;

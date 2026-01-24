@@ -3,21 +3,17 @@
  * Allows users to switch between different color themes
  */
 
-import { useEffect, useState } from 'react';
-import { defaultTheme, type Theme, themes } from '@/config/themes';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { defaultTheme, type ThemeName, themes } from '@/config/themes';
 
 export default function ThemeSwitcher() {
-  const [currentTheme, setCurrentTheme] = useState(defaultTheme);
+  const [currentTheme, setCurrentTheme] = useState<ThemeName>(defaultTheme);
   const [isOpen, setIsOpen] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  useEffect(() => {
-    // Load theme from localStorage
-    const savedTheme = localStorage.getItem('theme') || defaultTheme;
-    setCurrentTheme(savedTheme);
-    applyTheme(savedTheme);
-  }, []);
-
-  const applyTheme = (themeName: string) => {
+  const applyTheme = useCallback((themeName: ThemeName) => {
     const theme = themes.find((t) => t.name === themeName);
     if (!theme) return;
 
@@ -27,14 +23,72 @@ export default function ThemeSwitcher() {
       root.style.setProperty(cssVar, value);
     });
 
-    localStorage.setItem('theme', themeName);
-  };
+    try {
+      localStorage.setItem('theme', themeName);
+    } catch {
+      // localStorage unavailable - theme still applied to DOM
+    }
+  }, []);
 
-  const handleThemeChange = (themeName: string) => {
+  useEffect(() => {
+    // Load theme from localStorage with fallback
+    let savedTheme: ThemeName = defaultTheme;
+    try {
+      const stored = localStorage.getItem('theme');
+      if (stored && themes.some((t) => t.name === stored)) {
+        savedTheme = stored as ThemeName;
+      }
+    } catch {
+      // localStorage unavailable - use default
+    }
+    setCurrentTheme(savedTheme);
+    applyTheme(savedTheme);
+  }, [applyTheme]);
+
+  // Reset focus index when menu closes
+  useEffect(() => {
+    if (!isOpen) {
+      setFocusedIndex(-1);
+    }
+  }, [isOpen]);
+
+  // Focus the button when focusedIndex changes
+  useEffect(() => {
+    if (focusedIndex >= 0 && buttonRefs.current[focusedIndex]) {
+      buttonRefs.current[focusedIndex]?.focus();
+    }
+  }, [focusedIndex]);
+
+  const handleThemeChange = (themeName: ThemeName) => {
     setCurrentTheme(themeName);
     applyTheme(themeName);
     setIsOpen(false);
   };
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setFocusedIndex((prev) => (prev < themes.length - 1 ? prev + 1 : 0));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setFocusedIndex((prev) => (prev > 0 ? prev - 1 : themes.length - 1));
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setIsOpen(false);
+        break;
+      case 'Home':
+        e.preventDefault();
+        setFocusedIndex(0);
+        break;
+      case 'End':
+        e.preventDefault();
+        setFocusedIndex(themes.length - 1);
+        break;
+    }
+  }, []);
 
   const currentThemeLabel =
     themes.find((t) => t.name === currentTheme)?.label || 'Theme';
@@ -46,6 +100,8 @@ export default function ThemeSwitcher() {
         onClick={() => setIsOpen(!isOpen)}
         className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-9 px-3"
         aria-label="Switch theme"
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
       >
         <svg
           className="h-4 w-4 mr-2"
@@ -77,16 +133,33 @@ export default function ThemeSwitcher() {
             }}
             aria-label="Close theme menu"
           />
-          <div className="absolute right-0 mt-2 w-48 rounded-md border border-border bg-popover shadow-lg z-50">
+          <div
+            ref={menuRef}
+            className="absolute right-0 mt-2 w-48 rounded-md border border-border bg-popover shadow-lg z-50"
+            role="menu"
+            aria-label="Theme selection"
+            onKeyDown={handleKeyDown}
+          >
             <div className="p-2">
               <div className="mb-2 px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">
                 Theme
               </div>
-              {themes.map((theme) => (
+              {themes.map((theme, index) => (
                 <button
                   type="button"
                   key={theme.name}
+                  ref={(el) => {
+                    buttonRefs.current[index] = el;
+                  }}
                   onClick={() => handleThemeChange(theme.name)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleThemeChange(theme.name);
+                    }
+                  }}
+                  role="menuitem"
+                  tabIndex={focusedIndex === index ? 0 : -1}
                   className={`
                     w-full text-left px-3 py-2 text-sm rounded transition-colors
                     ${

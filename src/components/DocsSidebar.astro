@@ -4,33 +4,25 @@
  * Collapsible navigation populated from Turso database
  */
 
-interface Article {
-  id: number;
-  slug: string;
-  title: string;
-  folder: string | null;
-  tags: string[];
-  created_at: string;
-  updated_at: string;
-}
-
-interface Props {
-  articles?: Article[];
-}
-
 import { getAllArticles } from '@logan/libsql-search';
 import { getTursoClient } from '@/lib/turso';
+import { formatFolderName } from '@/lib/utils';
+import type { ArticleSummary } from '@/types/article';
+
+interface Props {
+  articles?: ArticleSummary[];
+}
 
 // Get current path for active state
 const currentPath = Astro.url.pathname;
 
 // Use provided articles or fetch from database
-let allArticles: Article[];
+let allArticles: ArticleSummary[];
 if (Astro.props.articles) {
   allArticles = Astro.props.articles;
 } else {
   const client = getTursoClient();
-  allArticles = (await getAllArticles(client)) as Article[];
+  allArticles = (await getAllArticles(client)) as ArticleSummary[];
 }
 
 const articlesByFolder = allArticles.reduce(
@@ -44,15 +36,6 @@ const articlesByFolder = allArticles.reduce(
   },
   {} as Record<string, typeof allArticles>,
 );
-
-// Format folder names for display
-function formatFolderName(folder: string): string {
-  if (folder === 'root') return 'Documentation';
-  return folder
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
 ---
 
 <aside

@@ -1,4 +1,5 @@
-import { marked } from 'marked';
+import { marked as markedBase } from 'marked';
+import sanitizeHtml from 'sanitize-html';
 
 /**
  * Escapes HTML special characters to prevent XSS attacks
@@ -14,7 +15,7 @@ function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (char) => htmlEscapes[char]);
 }
 
-marked.use({
+markedBase.use({
   renderer: {
     heading({ tokens, depth }) {
       const text = this.parser.parseInline(tokens);
@@ -41,5 +42,71 @@ marked.use({
     },
   },
 });
+
+/**
+ * Sanitization configuration for markdown HTML output
+ * Allows common markdown elements while preventing XSS attacks
+ */
+const sanitizeOptions: sanitizeHtml.IOptions = {
+  allowedTags: [
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'p',
+    'br',
+    'strong',
+    'em',
+    'u',
+    's',
+    'code',
+    'pre',
+    'ul',
+    'ol',
+    'li',
+    'blockquote',
+    'a',
+    'img',
+    'hr',
+    'table',
+    'thead',
+    'tbody',
+    'tr',
+    'th',
+    'td',
+    'div',
+    'span',
+  ],
+  allowedAttributes: {
+    a: ['href', 'title', 'target', 'rel'],
+    img: ['src', 'alt', 'title', 'loading', 'width', 'height'],
+    h1: ['id'],
+    h2: ['id'],
+    h3: ['id'],
+    h4: ['id'],
+    h5: ['id'],
+    h6: ['id'],
+    code: ['class'],
+    pre: ['class'],
+    '*': ['class'], // Allow class on any element for styling
+  },
+  allowedSchemes: ['http', 'https', 'mailto', 'tel'],
+  allowedSchemesByTag: {
+    img: ['http', 'https', 'data'],
+  },
+  // Ensure href and src are valid URLs
+  allowedSchemesAppliedToAttributes: ['href', 'src'],
+};
+
+/**
+ * Parse markdown to HTML with sanitization
+ * Wraps marked output to ensure XSS protection
+ */
+async function marked(content: string): Promise<string> {
+  const html = await markedBase(content);
+  return sanitizeHtml(html, sanitizeOptions);
+}
 
 export { marked };

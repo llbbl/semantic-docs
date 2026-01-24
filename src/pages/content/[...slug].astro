@@ -8,17 +8,7 @@ import DocsTocWithErrorBoundary from '@/components/DocsTocWithErrorBoundary.tsx'
 import DocsLayout from '@/layouts/DocsLayout.astro';
 import { marked } from '@/lib/markdown';
 import { getTursoClient } from '@/lib/turso';
-
-interface Article {
-  id: number;
-  slug: string;
-  title: string;
-  folder: string | null;
-  tags: string[];
-  content: string;
-  created_at: string;
-  updated_at: string;
-}
+import type { Article } from '@/types/article';
 
 // Generate static paths for all articles at build time
 export async function getStaticPaths() {

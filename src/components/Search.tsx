@@ -4,7 +4,7 @@
  * Command dialog with ⌘K keyboard shortcut
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CommandDialog,
   CommandEmpty,
@@ -38,6 +38,7 @@ export default function Search({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Handle ⌘K keyboard shortcut
   useEffect(() => {
@@ -59,6 +60,14 @@ export default function Search({
         return;
       }
 
+      // Cancel any in-flight request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      // Create new AbortController for this request
+      abortControllerRef.current = new AbortController();
+
       setLoading(true);
       setError(null);
 
@@ -70,6 +79,7 @@ export default function Search({
             query: searchQuery,
             limit: maxResults,
           }),
+          signal: abortControllerRef.current.signal,
         });
 
         if (!response.ok) {
@@ -79,7 +89,10 @@ export default function Search({
         const data = await response.json();
         setResults(data.results || []);
       } catch (err) {
-        console.error('Search error:', err);
+        // Ignore AbortError - it's expected when cancelling requests
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
         setError('Search failed. Please try again.');
         setResults([]);
       } finally {
@@ -109,34 +122,40 @@ export default function Search({
     [performSearch],
   );
 
-  // Cleanup timeout on unmount
+  // Cleanup timeout and abort controller on unmount
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
   }, []);
 
-  // Reset query when dialog closes
+  // Reset state when dialog closes
   useEffect(() => {
     if (!open) {
       setQuery('');
       setResults([]);
+      setError(null);
     }
   }, [open]);
 
-  // Group results by folder
-  const groupedResults = results.reduce(
-    (acc, result) => {
-      if (!acc[result.folder]) {
-        acc[result.folder] = [];
-      }
-      acc[result.folder].push(result);
-      return acc;
-    },
-    {} as Record<string, SearchResult[]>,
-  );
+  // Group results by folder (memoized to avoid recalculation on each render)
+  const groupedResults = useMemo(() => {
+    return results.reduce(
+      (acc, result) => {
+        if (!acc[result.folder]) {
+          acc[result.folder] = [];
+        }
+        acc[result.folder].push(result);
+        return acc;
+      },
+      {} as Record<string, SearchResult[]>,
+    );
+  }, [results]);
 
   return (
     <>

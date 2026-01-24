@@ -10,24 +10,26 @@ interface RateLimitEntry {
 
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
-// Cleanup old entries every 5 minutes
-setInterval(
-  () => {
-    const now = Date.now();
-    for (const [key, entry] of rateLimitStore.entries()) {
-      if (now > entry.resetTime) {
-        rateLimitStore.delete(key);
-      }
+/** Cleanup interval for expired rate limit entries (5 minutes) */
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+
+// Cleanup old entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitStore.entries()) {
+    if (now > entry.resetTime) {
+      rateLimitStore.delete(key);
     }
-  },
-  5 * 60 * 1000,
-);
+  }
+}, CLEANUP_INTERVAL_MS);
 
 export interface RateLimitConfig {
   /** Maximum requests per window */
   maxRequests: number;
   /** Window duration in seconds */
   windowSeconds: number;
+  /** Trust proxy headers (x-forwarded-for, x-real-ip, cf-connecting-ip) */
+  trustProxy?: boolean;
 }
 
 export interface RateLimitResult {
@@ -39,17 +41,27 @@ export interface RateLimitResult {
 
 /**
  * Get client identifier from request
+ * @param request - The incoming request
+ * @param trustProxy - Whether to trust proxy headers for IP resolution
  */
-function getClientId(request: Request): string {
-  // Try to get IP from various headers (depending on deployment platform)
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIp = request.headers.get('x-real-ip');
-  const cfConnectingIp = request.headers.get('cf-connecting-ip');
+function getClientId(request: Request, trustProxy = false): string {
+  if (trustProxy) {
+    // Try to get IP from various proxy headers (depending on deployment platform)
+    const cfConnectingIp = request.headers.get('cf-connecting-ip');
+    const realIp = request.headers.get('x-real-ip');
+    const forwarded = request.headers.get('x-forwarded-for');
 
-  const ip =
-    cfConnectingIp || realIp || forwarded?.split(',')[0]?.trim() || 'unknown';
+    const proxyIp =
+      cfConnectingIp || realIp || forwarded?.split(',')[0]?.trim();
 
-  return ip;
+    if (proxyIp) {
+      return proxyIp;
+    }
+  }
+
+  // Fallback: generate a unique ID to prevent all unknown clients sharing one bucket
+  // In production behind a proxy, this should rarely happen
+  return `unknown-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 /**
@@ -57,9 +69,13 @@ function getClientId(request: Request): string {
  */
 export function checkRateLimit(
   request: Request,
-  config: RateLimitConfig = { maxRequests: 10, windowSeconds: 60 },
+  config: RateLimitConfig = {
+    maxRequests: 10,
+    windowSeconds: 60,
+    trustProxy: false,
+  },
 ): RateLimitResult {
-  const clientId = getClientId(request);
+  const clientId = getClientId(request, config.trustProxy);
   const now = Date.now();
   const windowMs = config.windowSeconds * 1000;
 

@@ -18,6 +18,7 @@ describe('checkRateLimit', () => {
     const result = checkRateLimit(request, {
       maxRequests: 5,
       windowSeconds: 60,
+      trustProxy: true,
     });
 
     expect(result.allowed).toBe(true);
@@ -31,7 +32,7 @@ describe('checkRateLimit', () => {
       headers: { 'x-forwarded-for': '10.20.30.40' },
     });
 
-    const config = { maxRequests: 3, windowSeconds: 60 };
+    const config = { maxRequests: 3, windowSeconds: 60, trustProxy: true };
 
     // Make 3 requests (at limit)
     const result1 = checkRateLimit(request, config);
@@ -54,10 +55,10 @@ describe('checkRateLimit', () => {
 
   it('should reset after window expires', () => {
     const request = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '1.2.3.4' },
+      headers: { 'x-forwarded-for': '192.168.1.1' },
     });
 
-    const config = { maxRequests: 2, windowSeconds: 60 };
+    const config = { maxRequests: 2, windowSeconds: 60, trustProxy: true };
 
     // Exceed limit
     checkRateLimit(request, config);
@@ -76,14 +77,14 @@ describe('checkRateLimit', () => {
 
   it('should track different IPs separately', () => {
     const request1 = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '1.2.3.4' },
+      headers: { 'x-forwarded-for': '172.16.0.1' },
     });
 
     const request2 = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '5.6.7.8' },
+      headers: { 'x-forwarded-for': '172.16.0.2' },
     });
 
-    const config = { maxRequests: 2, windowSeconds: 60 };
+    const config = { maxRequests: 2, windowSeconds: 60, trustProxy: true };
 
     // Exhaust IP1
     checkRateLimit(request1, config);
@@ -96,22 +97,51 @@ describe('checkRateLimit', () => {
     expect(ip2Result.allowed).toBe(true);
   });
 
-  it('should handle CF-Connecting-IP header', () => {
+  it('should handle CF-Connecting-IP header when trustProxy is true', () => {
     const request = new Request('http://localhost/api/search.json', {
-      headers: { 'cf-connecting-ip': '1.2.3.4' },
+      headers: { 'cf-connecting-ip': '203.0.113.1' },
     });
 
-    const result = checkRateLimit(request);
+    const result = checkRateLimit(request, {
+      maxRequests: 10,
+      windowSeconds: 60,
+      trustProxy: true,
+    });
     expect(result.allowed).toBe(true);
   });
 
-  it('should handle x-real-ip header', () => {
+  it('should handle x-real-ip header when trustProxy is true', () => {
     const request = new Request('http://localhost/api/search.json', {
-      headers: { 'x-real-ip': '1.2.3.4' },
+      headers: { 'x-real-ip': '203.0.113.2' },
     });
 
+    const result = checkRateLimit(request, {
+      maxRequests: 10,
+      windowSeconds: 60,
+      trustProxy: true,
+    });
+    expect(result.allowed).toBe(true);
+  });
+
+  it('should ignore proxy headers when trustProxy is false', () => {
+    const request = new Request('http://localhost/api/search.json', {
+      headers: { 'x-forwarded-for': '1.2.3.4' },
+    });
+
+    // Without trustProxy, all requests fall back to 'unknown' client ID
+    const result = checkRateLimit(request, {
+      maxRequests: 10,
+      windowSeconds: 60,
+      trustProxy: false,
+    });
+    expect(result.allowed).toBe(true);
+  });
+
+  it('should use default config values', () => {
+    const request = new Request('http://localhost/api/search.json');
     const result = checkRateLimit(request);
     expect(result.allowed).toBe(true);
+    expect(result.limit).toBe(10);
   });
 });
 

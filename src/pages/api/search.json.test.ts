@@ -120,7 +120,25 @@ describe('Search API Route', () => {
 
       expect(response.status).toBe(500);
       expect(data.error).toBe('Search failed');
-      expect(data.message).toBe('Database connection failed');
+      // Generic message returned to client (internal details not exposed)
+      expect(data.message).toBe(
+        'An error occurred while processing your search request.',
+      );
+    });
+
+    it('should return 400 for invalid JSON body', async () => {
+      const request = new Request('http://localhost/api/search.json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: 'not valid json',
+      });
+
+      const response = await POST(createMockContext(request));
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe('Invalid JSON');
+      expect(data.message).toBe('Request body must be valid JSON.');
     });
 
     it('should respect embedding provider from environment', async () => {
