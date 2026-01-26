@@ -38,7 +38,9 @@ markedBase.use({
       const escapedAlt = escapeHtml(text || 'Image');
       const escapedHref = escapeHtml(href || '');
       const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
-      return `<img src="${escapedHref}" alt="${escapedAlt}"${titleAttr} loading="lazy" />`;
+      // Add decoding="async" for non-blocking decode, loading="lazy" for lazy load
+      // Width/height omitted as markdown doesn't provide dimensions - use CSS for sizing
+      return `<img src="${escapedHref}" alt="${escapedAlt}"${titleAttr} loading="lazy" decoding="async" />`;
     },
   },
 });
@@ -81,7 +83,7 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
   ],
   allowedAttributes: {
     a: ['href', 'title', 'target', 'rel'],
-    img: ['src', 'alt', 'title', 'loading', 'width', 'height'],
+    img: ['src', 'alt', 'title', 'loading', 'decoding', 'width', 'height'],
     h1: ['id'],
     h2: ['id'],
     h3: ['id'],

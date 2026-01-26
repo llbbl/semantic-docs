@@ -18,7 +18,7 @@ describe('checkRateLimit', () => {
     const result = checkRateLimit(request, {
       maxRequests: 5,
       windowSeconds: 60,
-      trustProxy: true,
+      trustedProxyHeader: 'x-forwarded-for',
     });
 
     expect(result.allowed).toBe(true);
@@ -32,7 +32,11 @@ describe('checkRateLimit', () => {
       headers: { 'x-forwarded-for': '10.20.30.40' },
     });
 
-    const config = { maxRequests: 3, windowSeconds: 60, trustProxy: true };
+    const config = {
+      maxRequests: 3,
+      windowSeconds: 60,
+      trustedProxyHeader: 'x-forwarded-for' as const,
+    };
 
     // Make 3 requests (at limit)
     const result1 = checkRateLimit(request, config);
@@ -58,7 +62,11 @@ describe('checkRateLimit', () => {
       headers: { 'x-forwarded-for': '192.168.1.1' },
     });
 
-    const config = { maxRequests: 2, windowSeconds: 60, trustProxy: true };
+    const config = {
+      maxRequests: 2,
+      windowSeconds: 60,
+      trustedProxyHeader: 'x-forwarded-for' as const,
+    };
 
     // Exceed limit
     checkRateLimit(request, config);
@@ -84,7 +92,11 @@ describe('checkRateLimit', () => {
       headers: { 'x-forwarded-for': '172.16.0.2' },
     });
 
-    const config = { maxRequests: 2, windowSeconds: 60, trustProxy: true };
+    const config = {
+      maxRequests: 2,
+      windowSeconds: 60,
+      trustedProxyHeader: 'x-forwarded-for' as const,
+    };
 
     // Exhaust IP1
     checkRateLimit(request1, config);
@@ -97,7 +109,7 @@ describe('checkRateLimit', () => {
     expect(ip2Result.allowed).toBe(true);
   });
 
-  it('should handle CF-Connecting-IP header when trustProxy is true', () => {
+  it('should handle CF-Connecting-IP header with trustedProxyHeader', () => {
     const request = new Request('http://localhost/api/search.json', {
       headers: { 'cf-connecting-ip': '203.0.113.1' },
     });
@@ -105,12 +117,12 @@ describe('checkRateLimit', () => {
     const result = checkRateLimit(request, {
       maxRequests: 10,
       windowSeconds: 60,
-      trustProxy: true,
+      trustedProxyHeader: 'cf-connecting-ip',
     });
     expect(result.allowed).toBe(true);
   });
 
-  it('should handle x-real-ip header when trustProxy is true', () => {
+  it('should handle x-real-ip header with trustedProxyHeader', () => {
     const request = new Request('http://localhost/api/search.json', {
       headers: { 'x-real-ip': '203.0.113.2' },
     });
@@ -118,21 +130,47 @@ describe('checkRateLimit', () => {
     const result = checkRateLimit(request, {
       maxRequests: 10,
       windowSeconds: 60,
-      trustProxy: true,
+      trustedProxyHeader: 'x-real-ip',
     });
     expect(result.allowed).toBe(true);
   });
 
-  it('should ignore proxy headers when trustProxy is false', () => {
+  it('should ignore proxy headers when trustedProxyHeader is not set', () => {
     const request = new Request('http://localhost/api/search.json', {
       headers: { 'x-forwarded-for': '1.2.3.4' },
     });
 
-    // Without trustProxy, all requests fall back to 'unknown' client ID
+    // Without trustedProxyHeader, all requests fall back to 'unknown' client ID
     const result = checkRateLimit(request, {
       maxRequests: 10,
       windowSeconds: 60,
-      trustProxy: false,
+    });
+    expect(result.allowed).toBe(true);
+  });
+
+  it('should reject invalid IP addresses in headers', () => {
+    const request = new Request('http://localhost/api/search.json', {
+      headers: { 'x-forwarded-for': 'invalid-ip-address' },
+    });
+
+    // Invalid IP should fall back to 'unknown' client ID
+    const result = checkRateLimit(request, {
+      maxRequests: 10,
+      windowSeconds: 60,
+      trustedProxyHeader: 'x-forwarded-for',
+    });
+    expect(result.allowed).toBe(true);
+  });
+
+  it('should validate IPv6 addresses', () => {
+    const request = new Request('http://localhost/api/search.json', {
+      headers: { 'x-forwarded-for': '2001:0db8:85a3:0000:0000:8a2e:0370:7334' },
+    });
+
+    const result = checkRateLimit(request, {
+      maxRequests: 10,
+      windowSeconds: 60,
+      trustedProxyHeader: 'x-forwarded-for',
     });
     expect(result.allowed).toBe(true);
   });

@@ -43,3 +43,9 @@ local.db-wal
 *.db
 *.db-shm
 *.db-wal
+
+# LLM dirs
+.claude
+.cursor
+.openai
+.gemini
