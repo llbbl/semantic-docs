@@ -13,10 +13,32 @@ import { checkRateLimit, createRateLimitHeaders } from '@/middleware/rateLimit';
 export const prerender = false;
 
 /**
+ * Environment configuration for validateOrigin
+ * Used to override environment detection in tests
+ */
+export interface ValidateOriginEnv {
+  isDevelopment: boolean;
+  isTest: boolean;
+}
+
+/**
  * Validate request origin to prevent CSRF attacks
  * Returns true if the origin is valid (same-origin or allowed)
+ * @param request - The incoming request
+ * @param siteUrl - The site's URL for origin comparison
+ * @param envOverride - Optional environment override for testing
  */
-function validateOrigin(request: Request, siteUrl?: URL): boolean {
+export function validateOrigin(
+  request: Request,
+  siteUrl?: URL,
+  envOverride?: ValidateOriginEnv,
+): boolean {
+  // Use provided env or fall back to actual env
+  const currentEnv = envOverride ?? {
+    isDevelopment: env.isDevelopment,
+    isTest: env.isTest,
+  };
+
   const origin = request.headers.get('origin');
   const referer = request.headers.get('referer');
 
@@ -27,7 +49,7 @@ function validateOrigin(request: Request, siteUrl?: URL): boolean {
   // For API security, we should require origin for POST requests
   if (!requestOrigin) {
     // Allow requests without origin in development/test
-    if (env.isDevelopment || env.isTest) {
+    if (currentEnv.isDevelopment || currentEnv.isTest) {
       return true;
     }
     // In production, reject requests without origin for POST
@@ -40,7 +62,7 @@ function validateOrigin(request: Request, siteUrl?: URL): boolean {
   }
 
   // Allow localhost in development/test
-  if (env.isDevelopment || env.isTest) {
+  if (currentEnv.isDevelopment || currentEnv.isTest) {
     const localhostPatterns = [
       /^https?:\/\/localhost(:\d+)?$/,
       /^https?:\/\/127\.0\.0\.1(:\d+)?$/,

@@ -93,10 +93,12 @@ function getClientId(
         proxyIp = request.headers.get('x-real-ip');
         break;
       case 'x-forwarded-for':
-        // X-Forwarded-For can contain multiple IPs: client, proxy1, proxy2, ...
-        // The rightmost IP added by the trusted proxy is the client IP
-        // However, we only take the first (leftmost) which is the original client
-        // This is safer than the last because intermediate proxies can also add IPs
+        // X-Forwarded-For format: "client, proxy1, proxy2, ..."
+        // The leftmost IP is the original client IP as reported to the first proxy.
+        // We take the leftmost IP because it represents the originating client.
+        // Security note: The leftmost IP can be spoofed if upstream proxies don't
+        // strip or validate existing X-Forwarded-For headers from incoming requests.
+        // For higher security, prefer cf-connecting-ip or x-real-ip from trusted proxies.
         proxyIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
         break;
     }
