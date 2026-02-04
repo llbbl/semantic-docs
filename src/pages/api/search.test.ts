@@ -2,7 +2,7 @@
  * @vitest-environment node
  */
 import { describe, expect, it } from 'vitest';
-import { validateOrigin, type ValidateOriginEnv } from './search.json';
+import { type ValidateOriginEnv, validateOrigin } from './search.json';
 
 // Environment configurations for testing
 const productionEnv: ValidateOriginEnv = {

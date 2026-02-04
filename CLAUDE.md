@@ -173,6 +173,34 @@ netlify deploy --prod
 - Set environment variables (`TURSO_DB_URL`, `TURSO_AUTH_TOKEN`, etc.) in your deployment platform's dashboard
 - only run "pnpm lint:fix" or "biome check --write ." if there are less than 5 files to be modified and the changes are simple, otherwise fix linter issues manually
 
+## Pre-Commit Checks
+
+**IMPORTANT:** Before committing any changes, always run these checks to avoid CI failures:
+
+```bash
+# 1. Format code (fixes line length, import ordering, etc.)
+pnpm format
+
+# 2. Run linter (catches unused imports, type issues, etc.)
+pnpm lint
+
+# 3. TypeScript compilation check
+pnpm exec tsc --noEmit
+
+# 4. Run tests (if code changes affect functionality)
+pnpm test
+```
+
+**Quick one-liner:**
+```bash
+pnpm format && pnpm lint && pnpm exec tsc --noEmit
+```
+
+Common CI failures to watch for:
+- **Long lines** - Biome enforces line length limits; `pnpm format` fixes these
+- **Import ordering** - Types must come before values in imports; `pnpm format` fixes this
+- **Unused imports/variables** - Note: Biome has false positives for `.astro` files (disabled via override)
+
 ## Commit Message Convention
 
 This project uses **Conventional Commits**. All commits must follow this format:
