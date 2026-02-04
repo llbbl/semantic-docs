@@ -43,3 +43,15 @@ local.db-wal
 *.db
 *.db-shm
 *.db-wal
+
+# LLM dirs
+.claude
+.cursor
+.openai
+.gemini
+.agent
+
+# LLM symlinks (point to CLAUDE.md)
+AGENTS.md
+GEMINI.md
+

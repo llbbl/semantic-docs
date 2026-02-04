@@ -23,13 +23,30 @@ setInterval(() => {
   }
 }, CLEANUP_INTERVAL_MS);
 
+/**
+ * Trusted proxy header sources - in order of trust priority
+ * cf-connecting-ip: Set by Cloudflare, cannot be spoofed by clients
+ * x-real-ip: Set by nginx/other proxies, should be from trusted proxy only
+ * x-forwarded-for: Can contain multiple IPs, last trusted proxy should be used
+ */
+export type TrustedProxyHeader =
+  | 'cf-connecting-ip'
+  | 'x-real-ip'
+  | 'x-forwarded-for';
+
 export interface RateLimitConfig {
   /** Maximum requests per window */
   maxRequests: number;
   /** Window duration in seconds */
   windowSeconds: number;
-  /** Trust proxy headers (x-forwarded-for, x-real-ip, cf-connecting-ip) */
-  trustProxy?: boolean;
+  /**
+   * Trusted proxy header to use for client IP resolution
+   * - 'cf-connecting-ip': Use when behind Cloudflare (most secure)
+   * - 'x-real-ip': Use when behind nginx with real_ip module
+   * - 'x-forwarded-for': Use with caution - only the rightmost non-private IP should be trusted
+   * - undefined: Don't trust proxy headers (direct connections only)
+   */
+  trustedProxyHeader?: TrustedProxyHeader;
 }
 
 export interface RateLimitResult {
@@ -40,21 +57,56 @@ export interface RateLimitResult {
 }
 
 /**
+ * Validate IP address format (IPv4 or IPv6)
+ * Prevents malicious header values from being used as rate limit keys
+ */
+function isValidIpAddress(ip: string): boolean {
+  // IPv4 pattern
+  const ipv4Regex =
+    /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+
+  // IPv6 pattern (simplified - covers most valid formats)
+  const ipv6Regex =
+    /^(?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4}$|^::(?:[a-fA-F0-9]{1,4}:){0,6}[a-fA-F0-9]{1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,7}:$|^(?:[a-fA-F0-9]{1,4}:){1,6}:[a-fA-F0-9]{1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,5}(?::[a-fA-F0-9]{1,4}){1,2}$|^(?:[a-fA-F0-9]{1,4}:){1,4}(?::[a-fA-F0-9]{1,4}){1,3}$|^(?:[a-fA-F0-9]{1,4}:){1,3}(?::[a-fA-F0-9]{1,4}){1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,2}(?::[a-fA-F0-9]{1,4}){1,5}$|^[a-fA-F0-9]{1,4}:(?::[a-fA-F0-9]{1,4}){1,6}$/;
+
+  return ipv4Regex.test(ip) || ipv6Regex.test(ip);
+}
+
+/**
  * Get client identifier from request
  * @param request - The incoming request
- * @param trustProxy - Whether to trust proxy headers for IP resolution
+ * @param trustedProxyHeader - Which proxy header to trust for IP resolution
  */
-function getClientId(request: Request, trustProxy = false): string {
-  if (trustProxy) {
-    // Try to get IP from various proxy headers (depending on deployment platform)
-    const cfConnectingIp = request.headers.get('cf-connecting-ip');
-    const realIp = request.headers.get('x-real-ip');
-    const forwarded = request.headers.get('x-forwarded-for');
+function getClientId(
+  request: Request,
+  trustedProxyHeader?: TrustedProxyHeader,
+): string {
+  if (trustedProxyHeader) {
+    let proxyIp: string | null = null;
 
-    const proxyIp =
-      cfConnectingIp || realIp || forwarded?.split(',')[0]?.trim();
+    switch (trustedProxyHeader) {
+      case 'cf-connecting-ip':
+        // Cloudflare header - most trusted, cannot be spoofed by clients
+        proxyIp = request.headers.get('cf-connecting-ip');
+        break;
+      case 'x-real-ip':
+        // nginx real_ip module - trusted if nginx is configured correctly
+        proxyIp = request.headers.get('x-real-ip');
+        break;
+      case 'x-forwarded-for':
+        // X-Forwarded-For format: "client, proxy1, proxy2, ..."
+        // The leftmost IP is the original client IP as reported to the first proxy.
+        // We take the leftmost IP because it represents the originating client.
+        // Security note: The leftmost IP can be spoofed if upstream proxies don't
+        // strip or validate existing X-Forwarded-For headers from incoming requests.
+        // For higher security, prefer cf-connecting-ip or x-real-ip from trusted proxies.
+        proxyIp =
+          request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
+        break;
+    }
 
-    if (proxyIp) {
+    // Validate the IP to prevent header injection attacks
+    if (proxyIp && isValidIpAddress(proxyIp)) {
       return proxyIp;
     }
   }
@@ -72,10 +124,9 @@ export function checkRateLimit(
   config: RateLimitConfig = {
     maxRequests: 10,
     windowSeconds: 60,
-    trustProxy: false,
   },
 ): RateLimitResult {
-  const clientId = getClientId(request, config.trustProxy);
+  const clientId = getClientId(request, config.trustedProxyHeader);
   const now = Date.now();
   const windowMs = config.windowSeconds * 1000;
 

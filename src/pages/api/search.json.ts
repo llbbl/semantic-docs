@@ -12,17 +12,112 @@ import { checkRateLimit, createRateLimitHeaders } from '@/middleware/rateLimit';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+/**
+ * Environment configuration for validateOrigin
+ * Used to override environment detection in tests
+ */
+export interface ValidateOriginEnv {
+  isDevelopment: boolean;
+  isTest: boolean;
+}
+
+/**
+ * Validate request origin to prevent CSRF attacks
+ * Returns true if the origin is valid (same-origin or allowed)
+ * @param request - The incoming request
+ * @param siteUrl - The site's URL for origin comparison
+ * @param envOverride - Optional environment override for testing
+ */
+export function validateOrigin(
+  request: Request,
+  siteUrl?: URL,
+  envOverride?: ValidateOriginEnv,
+): boolean {
+  // Use provided env or fall back to actual env
+  const currentEnv = envOverride ?? {
+    isDevelopment: env.isDevelopment,
+    isTest: env.isTest,
+  };
+
+  const origin = request.headers.get('origin');
+  const referer = request.headers.get('referer');
+
+  // If no origin header, check referer (some browsers don't send origin on same-origin)
+  const requestOrigin = origin || (referer ? new URL(referer).origin : null);
+
+  // No origin/referer could be a same-origin request or a non-browser client
+  // For API security, we should require origin for POST requests
+  if (!requestOrigin) {
+    // Allow requests without origin in development/test
+    if (currentEnv.isDevelopment || currentEnv.isTest) {
+      return true;
+    }
+    // In production, reject requests without origin for POST
+    return false;
+  }
+
+  // Check if origin matches the site URL
+  if (siteUrl && requestOrigin === siteUrl.origin) {
+    return true;
+  }
+
+  // Allow localhost in development/test
+  if (currentEnv.isDevelopment || currentEnv.isTest) {
+    const localhostPatterns = [
+      /^https?:\/\/localhost(:\d+)?$/,
+      /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+      /^https?:\/\/\[::1\](:\d+)?$/,
+    ];
+    return localhostPatterns.some((pattern) => pattern.test(requestOrigin));
+  }
+
+  return false;
+}
+
+/**
+ * Security headers for API responses
+ */
+const securityHeaders = {
+  // Prevent MIME type sniffing
+  'X-Content-Type-Options': 'nosniff',
+  // Prevent clickjacking
+  'X-Frame-Options': 'DENY',
+  // Enable XSS protection in older browsers
+  'X-XSS-Protection': '1; mode=block',
+  // Content Security Policy for JSON API responses
+  'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
+};
+
+export const POST: APIRoute = async ({ request, site }) => {
+  // CSRF protection: validate origin
+  if (!validateOrigin(request, site)) {
+    return new Response(
+      JSON.stringify({
+        error: 'Forbidden',
+        message: 'Invalid request origin',
+      }),
+      {
+        status: 403,
+        headers: {
+          'Content-Type': 'application/json',
+          ...securityHeaders,
+        },
+      },
+    );
+  }
+
   // Rate limiting: 20 requests per minute per IP
-  // Enable trustProxy for deployments behind reverse proxies/CDNs
+  // Use cf-connecting-ip for Cloudflare deployments (most secure)
+  // Change to 'x-real-ip' for nginx or undefined for direct connections
   const rateLimitResult = checkRateLimit(request, {
     maxRequests: 20,
     windowSeconds: 60,
-    trustProxy: true,
+    trustedProxyHeader: 'cf-connecting-ip',
   });
 
   const rateLimitHeaders = {
     'Content-Type': 'application/json',
+    ...securityHeaders,
     ...createRateLimitHeaders(rateLimitResult),
   };
 
@@ -136,6 +231,10 @@ export const POST: APIRoute = async ({ request }) => {
 export const GET: APIRoute = async () => {
   return new Response(JSON.stringify({ error: 'Use POST method for search' }), {
     status: 405,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...securityHeaders,
+      Allow: 'POST',
+    },
   });
 };

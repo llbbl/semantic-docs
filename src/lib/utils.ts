@@ -69,7 +69,7 @@ export function extractHeadings(
   const idRegex = /\bid=["']([^"']*)["']/i;
   const headings: Array<{ id: string; text: string; level: number }> = [];
 
-  let match;
+  let match: RegExpExecArray | null;
   while ((match = headingRegex.exec(html)) !== null) {
     const level = parseInt(match[1], 10);
     const attributes = match[2];

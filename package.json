@@ -34,6 +34,8 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
+    "uncov": "uncov",
+    "uncov:check": "uncov check",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write ."
@@ -62,6 +64,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.12",
+    "@llbbl/uncov": "0.1.4",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^24.10.2",
@@ -69,6 +72,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/sanitize-html": "^2.16.0",
     "@vitest/browser": "^3.2.4",
+    "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
     "happy-dom": "^20.3.7",
     "tsx": "^4.21.0",

@@ -34,12 +34,12 @@ import ThemeSwitcherWithErrorBoundary from './ThemeSwitcherWithErrorBoundary.tsx
       <div class="flex flex-1 items-center justify-end gap-2">
         <!-- Search Component -->
         <div class="w-10 sm:w-auto sm:max-w-[180px] md:w-[200px] lg:w-[240px] xl:w-[280px] md:ml-4 md:max-w-none shrink-0">
-          <SearchWithErrorBoundary client:load />
+          <SearchWithErrorBoundary client:idle />
         </div>
 
         <!-- Right Nav -->
         <nav class="flex items-center gap-2">
-          <ThemeSwitcherWithErrorBoundary client:load />
+          <ThemeSwitcherWithErrorBoundary client:idle />
           <a
             href="https://github.com/llbbl/semantic-docs"
             class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-9 w-9 p-2"

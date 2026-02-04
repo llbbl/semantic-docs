@@ -19,18 +19,34 @@
     "rules": {
       "recommended": true,
       "correctness": {
-        "noUnusedImports": "off",
-        "noUnusedVariables": "off",
+        "noUnusedImports": "warn",
+        "noUnusedVariables": "warn",
         "useExhaustiveDependencies": "off"
       },
       "suspicious": {
-        "noImplicitAnyLet": "off",
+        "noImplicitAnyLet": "warn",
         "noAssignInExpressions": "off",
         "noUnknownAtRules": "off",
         "useIterableCallbackReturn": "off"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "error"
       }
     }
   },
+  "overrides": [
+    {
+      "includes": ["**/*.astro"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedImports": "off",
+            "noUnusedVariables": "off"
+          }
+        }
+      }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "single",
