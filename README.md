@@ -1,5 +1,7 @@
 # semantic-docs
 
+[![Coverage](https://img.shields.io/codecov/c/github/llbbl/semantic-docs?label=coverage)](https://codecov.io/gh/llbbl/semantic-docs) [![CI](https://github.com/llbbl/semantic-docs/actions/workflows/ci.yml/badge.svg)](https://github.com/llbbl/semantic-docs/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/llbbl/semantic-docs)](https://github.com/llbbl/semantic-docs/releases)
+
 Documentation theme with semantic vector search.
 
 A beautiful, dark-mode documentation theme powered by [libsql-search](https://github.com/llbbl/libsql-search) for semantic search capabilities. Perfect for technical documentation, knowledge bases, and content-heavy sites.
