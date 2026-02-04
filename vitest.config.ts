@@ -21,7 +21,17 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],
-      exclude: ['node_modules/', 'dist/', '**/*.config.*', '**/scripts/**'],
+      exclude: [
+        'node_modules/',
+        'dist/',
+        '.astro/',
+        '**/*.config.*',
+        '**/scripts/**',
+        '**/*.astro',
+        '**/*.d.ts',
+        '**/types/**',
+        '**/config/**',
+      ],
     },
   },
 });
