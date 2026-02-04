@@ -20,7 +20,7 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
+      reporter: ['text', 'html', 'json-summary'],
       exclude: ['node_modules/', 'dist/', '**/*.config.*', '**/scripts/**'],
     },
   },
