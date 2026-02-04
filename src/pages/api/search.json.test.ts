@@ -141,9 +141,7 @@ describe('Search API Route', () => {
       expect(data.message).toBe('Request body must be valid JSON.');
     });
 
-    it('should respect embedding provider from environment', async () => {
-      vi.stubEnv('EMBEDDING_PROVIDER', 'gemini');
-
+    it('should use the local embedding provider', async () => {
       const mockResults: SearchResult[] = [];
       vi.mocked(search).mockResolvedValueOnce(mockResults);
 
@@ -158,12 +156,10 @@ describe('Search API Route', () => {
       expect(search).toHaveBeenCalledWith(
         expect.objectContaining({
           embeddingOptions: {
-            provider: 'gemini',
+            provider: 'local',
           },
         }),
       );
-
-      vi.unstubAllEnvs();
     });
   });
 

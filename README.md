@@ -1,5 +1,7 @@
 # semantic-docs
 
+[![Coverage](https://img.shields.io/codecov/c/github/llbbl/semantic-docs?label=coverage)](https://codecov.io/gh/llbbl/semantic-docs) [![CI](https://github.com/llbbl/semantic-docs/actions/workflows/ci.yml/badge.svg)](https://github.com/llbbl/semantic-docs/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/llbbl/semantic-docs)](https://github.com/llbbl/semantic-docs/releases)
+
 Documentation theme with semantic vector search.
 
 A beautiful, dark-mode documentation theme powered by [libsql-search](https://github.com/llbbl/libsql-search) for semantic search capabilities. Perfect for technical documentation, knowledge bases, and content-heavy sites.
@@ -31,6 +33,16 @@ Or use as a template on GitHub.
 pnpm install
 ```
 
+Optional: use the `justfile` task runner for common commands:
+
+```bash
+just
+just dev
+just test
+```
+
+See `docs/just.md` for the full list of recipes.
+
 ### 3. Set Up Environment
 
 Copy `.env.example` to `.env` and add your credentials:
@@ -44,7 +56,6 @@ Edit `.env`:
 ```env
 TURSO_DB_URL=libsql://your-database.turso.io
 TURSO_AUTH_TOKEN=your-auth-token
-EMBEDDING_PROVIDER=local
 ```
 
 **Get Turso credentials:**
@@ -130,21 +141,9 @@ const { title = "Your Site Name", description = "Your description" } = Astro.pro
 
 Edit `src/styles/global.css` to change the color scheme. The theme uses OKLCH colors for smooth gradients and perceptual uniformity.
 
-### Change Embedding Provider
+### Embeddings
 
-**Use Gemini** (free tier: 1,500 requests/day):
-
-```env
-EMBEDDING_PROVIDER=gemini
-GEMINI_API_KEY=your-key
-```
-
-**Use OpenAI** (paid):
-
-```env
-EMBEDDING_PROVIDER=openai
-OPENAI_API_KEY=your-key
-```
+Semantic search uses local embeddings by default, so no API keys are required.
 
 ## Project Structure
 
@@ -177,8 +176,6 @@ semantic-docs/
 ```
 
 ## Deployment
-
-> **Note**: Cloudflare Workers/Pages deployment support is currently in development on the `cloudflare-workers` branch.
 
 ### Container-Based Platforms (Recommended)
 
@@ -278,13 +275,6 @@ pnpm preview
 
 First run downloads ~50MB model. Subsequent runs use cache.
 
-Use Gemini for faster embeddings:
-
-```env
-EMBEDDING_PROVIDER=gemini
-GEMINI_API_KEY=your-key
-```
-
 ## Tech Stack
 
 - **Framework**: [Astro](https://astro.build) 5
@@ -292,7 +282,7 @@ GEMINI_API_KEY=your-key
 - **Database**: [Turso](https://turso.tech) (libSQL)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com) 4
 - **UI**: React islands for interactivity
-- **Embeddings**: Xenova, Gemini, or OpenAI
+- **Embeddings**: Xenova (local)
 
 ## License
 

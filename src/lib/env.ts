@@ -50,11 +50,6 @@ export function getRequiredEnv(key: string): string {
 }
 
 /**
- * Embedding provider type
- */
-export type EmbeddingProvider = 'local' | 'gemini' | 'openai';
-
-/**
  * Environment configuration object
  * Provides typed access to commonly used environment variables
  */
@@ -71,35 +66,6 @@ export const env = {
    */
   get tursoAuthToken(): string | undefined {
     return getEnv('TURSO_AUTH_TOKEN');
-  },
-
-  /**
-   * Embedding provider (local, gemini, or openai)
-   */
-  get embeddingProvider(): EmbeddingProvider {
-    const provider = getEnv('EMBEDDING_PROVIDER', 'local');
-    if (
-      provider === 'gemini' ||
-      provider === 'openai' ||
-      provider === 'local'
-    ) {
-      return provider;
-    }
-    return 'local';
-  },
-
-  /**
-   * Gemini API key for embeddings
-   */
-  get geminiApiKey(): string | undefined {
-    return getEnv('GEMINI_API_KEY');
-  },
-
-  /**
-   * OpenAI API key for embeddings
-   */
-  get openaiApiKey(): string | undefined {
-    return getEnv('OPENAI_API_KEY');
   },
 
   /**

@@ -25,14 +25,11 @@ setInterval(() => {
 
 /**
  * Trusted proxy header sources - in order of trust priority
- * cf-connecting-ip: Set by Cloudflare, cannot be spoofed by clients
  * x-real-ip: Set by nginx/other proxies, should be from trusted proxy only
- * x-forwarded-for: Can contain multiple IPs, last trusted proxy should be used
+ * x-forwarded-for: Can contain multiple IPs; only trust it when your proxy
+ *   sanitizes the header and you can reliably use the leftmost client IP.
  */
-export type TrustedProxyHeader =
-  | 'cf-connecting-ip'
-  | 'x-real-ip'
-  | 'x-forwarded-for';
+export type TrustedProxyHeader = 'x-real-ip' | 'x-forwarded-for';
 
 export interface RateLimitConfig {
   /** Maximum requests per window */
@@ -41,7 +38,6 @@ export interface RateLimitConfig {
   windowSeconds: number;
   /**
    * Trusted proxy header to use for client IP resolution
-   * - 'cf-connecting-ip': Use when behind Cloudflare (most secure)
    * - 'x-real-ip': Use when behind nginx with real_ip module
    * - 'x-forwarded-for': Use with caution - only the rightmost non-private IP should be trusted
    * - undefined: Don't trust proxy headers (direct connections only)
@@ -85,10 +81,6 @@ function getClientId(
     let proxyIp: string | null = null;
 
     switch (trustedProxyHeader) {
-      case 'cf-connecting-ip':
-        // Cloudflare header - most trusted, cannot be spoofed by clients
-        proxyIp = request.headers.get('cf-connecting-ip');
-        break;
       case 'x-real-ip':
         // nginx real_ip module - trusted if nginx is configured correctly
         proxyIp = request.headers.get('x-real-ip');
@@ -99,7 +91,7 @@ function getClientId(
         // We take the leftmost IP because it represents the originating client.
         // Security note: The leftmost IP can be spoofed if upstream proxies don't
         // strip or validate existing X-Forwarded-For headers from incoming requests.
-        // For higher security, prefer cf-connecting-ip or x-real-ip from trusted proxies.
+        // For higher security, prefer x-real-ip from trusted proxies.
         proxyIp =
           request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
         break;

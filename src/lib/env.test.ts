@@ -1,15 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { env, getEnv, getRequiredEnv } from './env';
 
-const TEST_KEYS = [
-  'TEST_KEY',
-  'TURSO_DB_URL',
-  'TURSO_AUTH_TOKEN',
-  'EMBEDDING_PROVIDER',
-  'GEMINI_API_KEY',
-  'OPENAI_API_KEY',
-  'NODE_ENV',
-];
+const TEST_KEYS = ['TEST_KEY', 'TURSO_DB_URL', 'TURSO_AUTH_TOKEN', 'NODE_ENV'];
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -64,33 +56,6 @@ describe('env getters', () => {
     expect(env.tursoDbUrl).toBe('libsql://test.turso.io');
     expect(env.tursoAuthToken).toBe('test-token');
     expect(env.hasTursoCredentials).toBe(true);
-  });
-
-  it('should default embedding provider to local', () => {
-    vi.stubEnv('EMBEDDING_PROVIDER', '');
-
-    expect(env.embeddingProvider).toBe('local');
-  });
-
-  it('should accept valid embedding providers', () => {
-    vi.stubEnv('EMBEDDING_PROVIDER', 'gemini');
-    expect(env.embeddingProvider).toBe('gemini');
-
-    vi.stubEnv('EMBEDDING_PROVIDER', 'openai');
-    expect(env.embeddingProvider).toBe('openai');
-  });
-
-  it('should fall back to local when embedding provider is invalid', () => {
-    vi.stubEnv('EMBEDDING_PROVIDER', 'invalid');
-    expect(env.embeddingProvider).toBe('local');
-  });
-
-  it('should expose API keys', () => {
-    vi.stubEnv('GEMINI_API_KEY', 'gemini-key');
-    vi.stubEnv('OPENAI_API_KEY', 'openai-key');
-
-    expect(env.geminiApiKey).toBe('gemini-key');
-    expect(env.openaiApiKey).toBe('openai-key');
   });
 
   it('should default NODE_ENV to development', () => {

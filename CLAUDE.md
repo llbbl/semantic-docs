@@ -52,7 +52,7 @@ pnpm format     # Format all files
 
 ### Content Flow
 1. **Markdown → Database**: Content in `./content` is indexed into Turso via `scripts/index-content.ts`
-2. **libsql-search**: Handles embedding generation (local/Gemini/OpenAI), vector storage, and semantic search
+2. **libsql-search**: Handles embedding generation (local), vector storage, and semantic search
 3. **Static Generation**: Article pages are pre-rendered at build time using `getStaticPaths()`
 4. **Server Search**: Search API runs server-side at `/api/search.json` (requires `output: 'server'` with Node.js adapter)
 
@@ -73,28 +73,19 @@ pnpm format     # Format all files
 Optional in `.env`:
 - `TURSO_DB_URL`: Turso database URL (libsql://...) - if not set, uses local libSQL file
 - `TURSO_AUTH_TOKEN`: Turso authentication token - if not set, uses local libSQL file
-- `EMBEDDING_PROVIDER`: "local" (default), "gemini", or "openai"
-- Optional: `GEMINI_API_KEY` or `OPENAI_API_KEY` (if using cloud providers)
+
+Embeddings run locally by default; no API keys are required.
 
 **Local Development**: If Turso credentials aren't provided, the project automatically falls back to a local SQLite file (`local.db`) for database operations. This is useful for CI builds and local development without cloud dependencies.
 
 ## Critical Configuration
 
-### Server-Side Rendering + Dual Adapter Support
+### Server-Side Rendering + Node Adapter
 The search API endpoint requires SSR with an adapter. The configuration uses:
 - `output: 'server'` - Enables server-side rendering
-- **Dual adapter support** - Conditionally uses Node.js or Cloudflare adapter based on `ADAPTER` env var
-  - Default: `node({ mode: 'standalone' })` - For traditional Node.js deployments
-  - Cloudflare: `cloudflare()` - For Cloudflare Workers (set `ADAPTER=cloudflare`)
+- `node({ mode: 'standalone' })` - For traditional Node.js deployments
 - Article pages marked with `prerender: true` are pre-rendered as static HTML
 - Search API marked with `prerender: false` runs server-side
-
-**Adapter Selection** (astro.config.mjs:14-16):
-```js
-const adapter = process.env.ADAPTER === 'cloudflare'
-  ? cloudflare()
-  : node({ mode: 'standalone' });
-```
 
 **Never** remove the adapter or change output to 'static', or the search API will break.
 
@@ -129,11 +120,11 @@ The project relies heavily on libsql-search. When modifying search behavior:
 3. Update `src/pages/api/search.json.ts` for search query changes
 4. Maintain embedding dimension consistency (768) across indexing and search
 
-### Customizing Embedding Providers
-To switch providers, update `.env` and ensure API keys are set. The dimension (768) must match across:
+### Customizing Embeddings
+The embedding dimension (768) must match across:
 - `scripts/index-content.ts` (createTable and indexContent)
-- Search API (automatically uses same provider)
-- Re-index content after switching providers
+- Search API
+- Re-index content after changing the embedding model or dimension
 
 ### Styling
 - Uses Tailwind CSS 4 via Vite plugin
@@ -152,7 +143,6 @@ To switch providers, update `.env` and ensure API keys are set. The dimension (7
 
 ## Deployment Options
 
-> **Note**: Cloudflare Workers/Pages deployment is being developed in the `cloudflare-workers` branch.
 
 ### Node.js Platforms (Vercel, Netlify, etc.)
 

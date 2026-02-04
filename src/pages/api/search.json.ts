@@ -107,12 +107,12 @@ export const POST: APIRoute = async ({ request, site }) => {
   }
 
   // Rate limiting: 20 requests per minute per IP
-  // Use cf-connecting-ip for Cloudflare deployments (most secure)
-  // Change to 'x-real-ip' for nginx or undefined for direct connections
+  // Use 'x-forwarded-for' for common proxy setups.
+  // Change to 'x-real-ip' for nginx or undefined for direct connections.
   const rateLimitResult = checkRateLimit(request, {
     maxRequests: 20,
     windowSeconds: 60,
-    trustedProxyHeader: 'cf-connecting-ip',
+    trustedProxyHeader: 'x-forwarded-for',
   });
 
   const rateLimitHeaders = {
@@ -195,7 +195,7 @@ export const POST: APIRoute = async ({ request, site }) => {
       query,
       limit: sanitizedLimit,
       embeddingOptions: {
-        provider: env.embeddingProvider,
+        provider: 'local',
       },
     });
 

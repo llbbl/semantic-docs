@@ -41,7 +41,7 @@ Check out the README for customization options:
 
 - Change colors
 - Update site title
-- Configure embedding providers
+- Tune search behavior
 - And more!
 
 ---

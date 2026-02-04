@@ -109,15 +109,15 @@ describe('checkRateLimit', () => {
     expect(ip2Result.allowed).toBe(true);
   });
 
-  it('should handle CF-Connecting-IP header with trustedProxyHeader', () => {
+  it('should handle x-forwarded-for header with trustedProxyHeader', () => {
     const request = new Request('http://localhost/api/search.json', {
-      headers: { 'cf-connecting-ip': '203.0.113.1' },
+      headers: { 'x-forwarded-for': '203.0.113.1' },
     });
 
     const result = checkRateLimit(request, {
       maxRequests: 10,
       windowSeconds: 60,
-      trustedProxyHeader: 'cf-connecting-ip',
+      trustedProxyHeader: 'x-forwarded-for',
     });
     expect(result.allowed).toBe(true);
   });

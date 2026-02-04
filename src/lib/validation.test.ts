@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  isValidEmbeddingProvider,
   isValidSearchQuery,
   isValidSlug,
   validateEnvironment,
@@ -28,22 +27,6 @@ describe('isValidSearchQuery', () => {
     expect(isValidSearchQuery('  ')).toBe(false);
     expect(isValidSearchQuery('  a  ')).toBe(false);
     expect(isValidSearchQuery('  ab  ')).toBe(true);
-  });
-});
-
-describe('isValidEmbeddingProvider', () => {
-  it('should return true for valid providers', () => {
-    expect(isValidEmbeddingProvider('local')).toBe(true);
-    expect(isValidEmbeddingProvider('gemini')).toBe(true);
-    expect(isValidEmbeddingProvider('openai')).toBe(true);
-  });
-
-  it('should return false for invalid providers', () => {
-    expect(isValidEmbeddingProvider('invalid')).toBe(false);
-    expect(isValidEmbeddingProvider('OPENAI')).toBe(false);
-    expect(isValidEmbeddingProvider('')).toBe(false);
-    expect(isValidEmbeddingProvider(123)).toBe(false);
-    expect(isValidEmbeddingProvider(null)).toBe(false);
   });
 });
 
@@ -77,24 +60,12 @@ describe('validateEnvironment', () => {
     const env = {
       TURSO_DB_URL: 'libsql://test.turso.io',
       TURSO_AUTH_TOKEN: 'test-token',
-      EMBEDDING_PROVIDER: 'local',
     };
 
     const result = validateEnvironment(env);
 
     expect(result.TURSO_DB_URL).toBe('libsql://test.turso.io');
     expect(result.TURSO_AUTH_TOKEN).toBe('test-token');
-    expect(result.EMBEDDING_PROVIDER).toBe('local');
-  });
-
-  it('should default to local provider', () => {
-    const env = {
-      TURSO_DB_URL: 'libsql://test.turso.io',
-      TURSO_AUTH_TOKEN: 'test-token',
-    };
-
-    const result = validateEnvironment(env);
-    expect(result.EMBEDDING_PROVIDER).toBe('local');
   });
 
   it('should throw error for missing TURSO_DB_URL', () => {
@@ -113,53 +84,5 @@ describe('validateEnvironment', () => {
     expect(() => validateEnvironment(env)).toThrow(
       'TURSO_AUTH_TOKEN is required',
     );
-  });
-
-  it('should throw error for invalid embedding provider', () => {
-    const env = {
-      TURSO_DB_URL: 'libsql://test.turso.io',
-      TURSO_AUTH_TOKEN: 'test-token',
-      EMBEDDING_PROVIDER: 'invalid',
-    };
-
-    expect(() => validateEnvironment(env)).toThrow(
-      'Invalid EMBEDDING_PROVIDER',
-    );
-  });
-
-  it('should require GEMINI_API_KEY for gemini provider', () => {
-    const env = {
-      TURSO_DB_URL: 'libsql://test.turso.io',
-      TURSO_AUTH_TOKEN: 'test-token',
-      EMBEDDING_PROVIDER: 'gemini',
-    };
-
-    expect(() => validateEnvironment(env)).toThrow(
-      'GEMINI_API_KEY is required',
-    );
-  });
-
-  it('should require OPENAI_API_KEY for openai provider', () => {
-    const env = {
-      TURSO_DB_URL: 'libsql://test.turso.io',
-      TURSO_AUTH_TOKEN: 'test-token',
-      EMBEDDING_PROVIDER: 'openai',
-    };
-
-    expect(() => validateEnvironment(env)).toThrow(
-      'OPENAI_API_KEY is required',
-    );
-  });
-
-  it('should accept API keys when provider is set', () => {
-    const env = {
-      TURSO_DB_URL: 'libsql://test.turso.io',
-      TURSO_AUTH_TOKEN: 'test-token',
-      EMBEDDING_PROVIDER: 'gemini',
-      GEMINI_API_KEY: 'test-key',
-    };
-
-    const result = validateEnvironment(env);
-    expect(result.GEMINI_API_KEY).toBe('test-key');
   });
 });

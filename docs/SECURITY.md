@@ -50,12 +50,10 @@ For multi-server deployments, consider:
    ```
 
 2. **Edge rate limiting** (Platform-specific)
-   - Cloudflare Workers: Use Durable Objects
    - Vercel: Use Edge Config or KV
    - Netlify: Use Blobs
 
 3. **WAF/CDN rate limiting**
-   - Cloudflare: Configure rate limiting rules
    - AWS CloudFront: Lambda@Edge
    - Fastly: VCL rate limiting
 
@@ -71,15 +69,6 @@ The API limits:
 **Local/Xenova Provider** (Free)
 - Risk: CPU abuse
 - Mitigation: Rate limiting sufficient
-
-**Gemini Provider** (Free tier: 1,500 req/day)
-- Risk: API quota exhaustion
-- Mitigation: Consider stricter rate limits (5-10 req/min)
-
-**OpenAI Provider** (Paid)
-- Risk: Cost abuse
-- Mitigation: Monitor usage, alert on anomalies
-- Recommendation: Use OpenAI's own rate limiting
 
 ### Turso Database Limits
 
