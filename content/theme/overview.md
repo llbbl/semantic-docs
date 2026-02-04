@@ -13,7 +13,7 @@ Semantic Docs is a modern documentation theme built with Astro, featuring semant
 
 ### Semantic Vector Search
 - **Vector embeddings**: Content is indexed with 768-dimension embeddings
-- **Three embedding providers**: Local (onnxruntime), Gemini, or OpenAI
+- **Local embeddings**: Runs on-device with no API keys required
 - **Fast semantic search**: Natural language queries return relevant results
 - **Edge-optimized**: Runs on Turso's edge database for low latency
 
@@ -116,12 +116,6 @@ semantic-docs/
 TURSO_DB_URL=libsql://your-db.turso.io
 TURSO_AUTH_TOKEN=your-token
 
-# Embedding provider (optional, defaults to "local")
-EMBEDDING_PROVIDER=local  # or "gemini" or "openai"
-
-# API keys (if using cloud embeddings)
-GEMINI_API_KEY=your-key
-OPENAI_API_KEY=your-key
 ```
 
 ### Astro Configuration

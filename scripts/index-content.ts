@@ -31,9 +31,7 @@ const result = await indexContent({
   client,
   contentPath: './content',
   embeddingOptions: {
-    provider:
-      (process.env.EMBEDDING_PROVIDER as 'local' | 'gemini' | 'openai') ||
-      'local',
+    provider: 'local',
     dimensions: 768,
   },
   onProgress: (current, total, file) => {

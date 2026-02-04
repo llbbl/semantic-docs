@@ -7,7 +7,6 @@ FROM node:20-slim AS builder
 # Build arguments for Turso credentials (required for indexing and pre-rendering)
 ARG TURSO_DB_URL
 ARG TURSO_AUTH_TOKEN
-ARG EMBEDDING_PROVIDER=local
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -27,7 +26,6 @@ COPY . .
 # Set environment variables for build
 ENV TURSO_DB_URL=$TURSO_DB_URL
 ENV TURSO_AUTH_TOKEN=$TURSO_AUTH_TOKEN
-ENV EMBEDDING_PROVIDER=$EMBEDDING_PROVIDER
 
 # Index content to Turso database (env vars already set via ENV directives)
 RUN pnpm exec tsx scripts/init-db.ts && pnpm exec tsx scripts/index-content.ts

@@ -117,15 +117,12 @@ const embedding = await embedder(text, {
 console.log(embedding.data);  // [0.123, -0.456, 0.789, ...]
 ```
 
-### Popular Models
+### Popular Local Models
 
 | Model | Dimensions | Speed | Quality |
 |-------|------------|-------|---------|
 | all-MiniLM-L6-v2 | 384 | Fast | Good |
 | all-mpnet-base-v2 | 768 | Medium | Better |
-| text-embedding-3-small (OpenAI) | 1536 | API | Excellent |
-| text-embedding-ada-002 (OpenAI) | 1536 | API | Excellent |
-| textembedding-gecko (Gemini) | 768 | API | Excellent |
 
 ## Implementation in Astro Vault
 
@@ -351,7 +348,7 @@ async function hybridSearch(query: string) {
 - **E-commerce**: Product codes (full-text) + descriptions (semantic)
 - **Code search**: Function names (full-text) + purpose (semantic)
 
-## Embedding Providers
+## Embeddings
 
 ### Local (Xenova Transformers)
 ```typescript
@@ -364,31 +361,6 @@ const embedder = await pipeline('feature-extraction',
 const embedding = await embedder(text);
 ```
 
-### OpenAI
-```typescript
-// Pros: High quality, fast
-// Cons: Costs money, rate limits
-
-import { OpenAI } from 'openai';
-const openai = new OpenAI();
-const response = await openai.embeddings.create({
-  model: 'text-embedding-3-small',
-  input: text,
-});
-const embedding = response.data[0].embedding;
-```
-
-### Gemini
-```typescript
-// Pros: High quality, generous free tier
-// Cons: Rate limits
-
-import { GoogleGenerativeAI } from '@google/generative-ai';
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'embedding-001' });
-const result = await model.embedContent(text);
-const embedding = result.embedding.values;
-```
 
 ## Use Cases
 
@@ -409,5 +381,4 @@ const embedding = result.embedding.values;
 
 - **Xenova Transformers**: [huggingface.co/docs/transformers.js](https://huggingface.co/docs/transformers.js)
 - **Sentence Transformers**: [sbert.net](https://www.sbert.net/)
-- **OpenAI Embeddings**: [platform.openai.com/docs/guides/embeddings](https://platform.openai.com/docs/guides/embeddings)
 - **Vector Search Explained**: [pinecone.io/learn/vector-database](https://www.pinecone.io/learn/vector-database/)
