@@ -42,8 +42,8 @@ importers:
         specifier: ^1.1.1
         version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       lucide-react:
-        specifier: ^0.575.0
-        version: 0.575.0(react@19.2.4)
+        specifier: ^0.576.0
+        version: 0.576.0(react@19.2.4)
       marked:
         specifier: ^17.0.3
         version: 17.0.3
@@ -341,8 +341,8 @@ packages:
     peerDependencies:
       '@csstools/css-tokenizer': ^4.0.0
 
-  '@csstools/css-syntax-patches-for-csstree@1.0.28':
-    resolution: {integrity: sha512-1NRf1CUBjnr3K7hu8BLxjQrKCxEe8FP/xmPTenAxCRZWVLbmGotkFvG9mfNpjA6k7Bw1bw4BilZq9cu19RA5pg==}
+  '@csstools/css-syntax-patches-for-csstree@1.0.29':
+    resolution: {integrity: sha512-jx9GjkkP5YHuTmko2eWAvpPnb0mB4mGRr2U7XwVNwevm8nlpobZEVk+GNmiYMk2VuA75v+plfXWyroWKmICZXg==}
 
   '@csstools/css-tokenizer@4.0.0':
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
@@ -2427,8 +2427,8 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
-  lucide-react@0.575.0:
-    resolution: {integrity: sha512-VuXgKZrk0uiDlWjGGXmKV6MSk9Yy4l10qgVvzGn2AWBx1Ylt0iBexKOAoA6I7JO3m+M9oeovJd3yYENfkUbOeg==}
+  lucide-react@0.576.0:
+    resolution: {integrity: sha512-koNxU14BXrxUfZQ9cUaP0ES1uyPZKYDjk31FQZB6dQ/x+tXk979sVAn9ppZ/pVeJJyOxVM8j1E+8QEuSc02Vug==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
@@ -3043,11 +3043,11 @@ packages:
     resolution: {integrity: sha512-PSkbLUoxOFRzJYjjxHJt9xro7D+iilgMX/C9lawzVuYiIdcihh9DXmVibBe8lmcFrRi/VzlPjBxbN7rH24q8/Q==}
     engines: {node: '>=14.0.0'}
 
-  tldts-core@7.0.23:
-    resolution: {integrity: sha512-0g9vrtDQLrNIiCj22HSe9d4mLVG3g5ph5DZ8zCKBr4OtrspmNB6ss7hVyzArAeE88ceZocIEGkyW1Ime7fxPtQ==}
+  tldts-core@7.0.24:
+    resolution: {integrity: sha512-pj7yygNMoMRqG7ML2SDQ0xNIOfN3IBDUcPVM2Sg6hP96oFNN2nqnzHreT3z9xLq85IWJyNTvD38O002DdOrPMw==}
 
-  tldts@7.0.23:
-    resolution: {integrity: sha512-ASdhgQIBSay0R/eXggAkQ53G4nTJqTXqC2kbaBbdDwM7SkjyZyO0OaaN1/FH7U/yCeqOHDwFO5j8+Os/IS1dXw==}
+  tldts@7.0.24:
+    resolution: {integrity: sha512-1r6vQTTt1rUiJkI5vX7KG8PR342Ru/5Oh13kEQP2SMbRSZpOey9SrBe27IDxkoWulx8ShWu4K6C0BkctP8Z1bQ==}
     hasBin: true
 
   toidentifier@1.0.1:
@@ -3756,7 +3756,7 @@ snapshots:
       '@csstools/css-tokenizer': 4.0.0
     optional: true
 
-  '@csstools/css-syntax-patches-for-csstree@1.0.28':
+  '@csstools/css-syntax-patches-for-csstree@1.0.29':
     optional: true
 
   '@csstools/css-tokenizer@4.0.0':
@@ -5080,7 +5080,7 @@ snapshots:
   cssstyle@5.3.7:
     dependencies:
       '@asamuzakjp/css-color': 4.1.2
-      '@csstools/css-syntax-patches-for-csstree': 1.0.28
+      '@csstools/css-syntax-patches-for-csstree': 1.0.29
       css-tree: 3.1.0
       lru-cache: 11.2.6
     optional: true
@@ -5702,7 +5702,7 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lucide-react@0.575.0(react@19.2.4):
+  lucide-react@0.576.0(react@19.2.4):
     dependencies:
       react: 19.2.4
 
@@ -6594,12 +6594,12 @@ snapshots:
 
   tinyrainbow@3.0.3: {}
 
-  tldts-core@7.0.23:
+  tldts-core@7.0.24:
     optional: true
 
-  tldts@7.0.23:
+  tldts@7.0.24:
     dependencies:
-      tldts-core: 7.0.23
+      tldts-core: 7.0.24
     optional: true
 
   toidentifier@1.0.1: {}
@@ -6608,7 +6608,7 @@ snapshots:
 
   tough-cookie@6.0.0:
     dependencies:
-      tldts: 7.0.23
+      tldts: 7.0.24
     optional: true
 
   tr46@0.0.3: {}
