@@ -98,6 +98,11 @@ changelog-preview:
 # Version Management
 # ============================================================================
 
+# CI-friendly version setter (Linux sed compatible)
+set-version version:
+    jq --arg v "{{version}}" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
+    @echo "Set version to {{version}}"
+
 # Show current version
 version:
     @echo "Current version: $(jq -r '.version' package.json)"
