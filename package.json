@@ -41,7 +41,7 @@
     "format": "biome format --write ."
   },
   "dependencies": {
-    "@astrojs/node": "^9.5.4",
+    "@astrojs/node": "^10.0.0",
     "@astrojs/react": "^4.4.2",
     "@libsql/client": "^0.17.0",
     "@logan/libsql-search": "jsr:^0.1.3",
