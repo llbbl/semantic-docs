@@ -6,7 +6,9 @@
 
 import { createClient } from '@libsql/client';
 import { createTable, indexContent } from '@logan/libsql-search';
-import { logger } from 'logan-logger';
+import loganLogger from 'logan-logger';
+
+const { logger } = loganLogger;
 
 // Initialize client (Turso or local libSQL)
 const url = process.env.TURSO_DB_URL;
