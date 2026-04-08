@@ -25,7 +25,7 @@ const mockLogger = {
   debug: vi.fn(),
 };
 
-vi.mock('@logan/logger', () => ({
+vi.mock('logan-logger', () => ({
   logger: mockLogger,
 }));
 
@@ -39,7 +39,7 @@ describe('getTursoClient', () => {
     vi.doMock('@libsql/client', () => ({
       createClient: mockCreateClient,
     }));
-    vi.doMock('@logan/logger', () => ({
+    vi.doMock('logan-logger', () => ({
       logger: mockLogger,
     }));
     // Clear environment variables

@@ -4,8 +4,8 @@
  */
 
 import { search } from '@logan/libsql-search';
-import { logger } from '@logan/logger';
 import type { APIRoute } from 'astro';
+import { logger } from 'logan-logger';
 import { env } from '@/lib/env';
 import { getTursoClient } from '@/lib/turso';
 import { checkRateLimit, createRateLimitHeaders } from '@/middleware/rateLimit';
