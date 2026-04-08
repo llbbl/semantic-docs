@@ -4,7 +4,7 @@
  */
 
 import { type Client, createClient } from '@libsql/client';
-import { logger } from '@logan/logger';
+import { logger } from 'logan-logger';
 
 let client: Client | null = null;
 
