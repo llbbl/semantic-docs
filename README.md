@@ -284,6 +284,25 @@ First run downloads ~50MB model. Subsequent runs use cache.
 - **UI**: React islands for interactivity
 - **Embeddings**: Xenova (local)
 
+## Releases
+
+Releases are automated via GitHub Actions on every push to `main`. The version bump is determined by [conventional commit](https://www.conventionalcommits.org/) prefixes:
+
+| Commit Prefix | Version Bump | Example |
+|---|---|---|
+| `feat!:` or `BREAKING CHANGE` | **Major** (v2.0.0) | `feat!: redesign search API` |
+| `feat:` | **Minor** (v1.5.0) | `feat(deps): update 19 dependencies` |
+| `fix:`, `chore:`, `docs:`, etc. | **Patch** (v1.4.1) | `fix: handle empty search query` |
+
+The workflow automatically:
+1. Determines the next version from commit messages since the last tag
+2. Updates `package.json` version
+3. Runs type checking and tests
+4. Creates a version commit and git tag
+5. Generates a changelog with [git-cliff](https://git-cliff.org/) and publishes a GitHub Release
+
+To trigger a **minor** release for dependency updates, use `feat(deps):` instead of `chore(deps):` as the commit prefix.
+
 ## License
 
 MIT
