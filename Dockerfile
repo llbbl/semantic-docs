@@ -2,7 +2,7 @@
 # Automatically indexes content to Turso during build
 
 # Build stage
-FROM node:20-slim AS builder
+FROM node:22-slim AS builder
 
 # Build arguments for Turso credentials (required for indexing and pre-rendering)
 ARG TURSO_DB_URL
@@ -15,7 +15,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-lock.yaml* ./
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 
 # Install dependencies
 RUN pnpm install --no-frozen-lockfile
@@ -34,7 +34,7 @@ RUN pnpm exec tsx scripts/init-db.ts && pnpm exec tsx scripts/index-content.ts
 RUN pnpm build
 
 # Production stage
-FROM node:20-slim AS runtime
+FROM node:22-slim AS runtime
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -43,7 +43,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-lock.yaml* ./
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 
 # Install production dependencies only
 RUN pnpm install --prod --no-frozen-lockfile
