@@ -21,20 +21,22 @@ export async function getStaticPaths() {
   }));
 }
 
-// Get the slug from the URL
+// Get the slug from the URL. Because this route is prerendered and
+// getStaticPaths enumerates every valid slug, `slug` and `article` are
+// guaranteed to be defined at build time — a missing one is a build-time
+// invariant violation, not a runtime 404.
 const { slug } = Astro.params;
 const { allArticles } = Astro.props as { allArticles: Article[] };
 
 if (!slug) {
-  return Astro.redirect('/');
+  throw new Error('[...slug].astro reached without a slug param');
 }
 
-// Fetch the article from database
 const client = getTursoClient();
 const article = await getArticleBySlug(client, slug);
 
 if (!article) {
-  return Astro.redirect('/404');
+  throw new Error(`Article not found for prerendered slug: ${slug}`);
 }
 
 // Convert markdown to HTML

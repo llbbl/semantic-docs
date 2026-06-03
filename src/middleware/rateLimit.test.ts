@@ -175,6 +175,32 @@ describe('checkRateLimit', () => {
     expect(result.allowed).toBe(true);
   });
 
+  it('should share a single bucket for all unattributed requests', () => {
+    // Regression: a unique-per-request fallback key would silently disable the
+    // limiter for any client that omits or spoofs the trusted proxy header.
+    // Verifies the bucket is shared by checking `remaining` decrements across
+    // requests with different (invalid) header values.
+    const config = {
+      maxRequests: 1000,
+      windowSeconds: 60,
+      trustedProxyHeader: 'x-forwarded-for' as const,
+    };
+    const reqA = new Request('http://localhost/api/search.json', {
+      headers: { 'x-forwarded-for': 'not-an-ip' },
+    });
+    const reqB = new Request('http://localhost/api/search.json');
+    const reqC = new Request('http://localhost/api/search.json', {
+      headers: { 'x-forwarded-for': 'also-invalid' },
+    });
+
+    const first = checkRateLimit(reqA, config).remaining;
+    const second = checkRateLimit(reqB, config).remaining;
+    const third = checkRateLimit(reqC, config).remaining;
+
+    expect(second).toBe(first - 1);
+    expect(third).toBe(first - 2);
+  });
+
   it('should use default config values', () => {
     const request = new Request('http://localhost/api/search.json');
     const result = checkRateLimit(request);

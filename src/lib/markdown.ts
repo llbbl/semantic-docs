@@ -1,6 +1,24 @@
 import { marked as markedBase } from 'marked';
 import sanitizeHtml from 'sanitize-html';
 
+// Allowlist of URL schemes considered safe to emit in href/src attributes.
+// Defense-in-depth: sanitize-html also enforces this on the post-render pass,
+// but pre-rendering with `javascript:` text would still let the attribute
+// reach the sanitizer, and any future removal of sanitize-html would silently
+// reintroduce XSS. Keep this aligned with `allowedSchemes` below.
+const SAFE_LINK_SCHEMES = ['http:', 'https:', 'mailto:', 'tel:'];
+const SAFE_IMAGE_SCHEMES = ['http:', 'https:', 'data:'];
+
+function isSafeUrl(href: string | undefined, schemes: string[]): boolean {
+  if (!href) return false;
+  // Browsers tolerate leading whitespace in href/src, so the scheme check
+  // must run against the trimmed value too — otherwise `"  javascript:..."`
+  // looks scheme-less and would slip through as "relative".
+  const v = href.trim().toLowerCase();
+  if (!/^[a-z][a-z0-9+.-]*:/.test(v)) return true;
+  return schemes.some((s) => v.startsWith(s));
+}
+
 /**
  * Escapes HTML special characters to prevent XSS attacks
  */
@@ -27,16 +45,18 @@ markedBase.use({
     },
     link({ href, title, tokens }) {
       const text = this.parser.parseInline(tokens);
-      const escapedHref = escapeHtml(href || '');
+      const safeHref = isSafeUrl(href, SAFE_LINK_SCHEMES) ? href || '' : '';
+      const escapedHref = escapeHtml(safeHref);
       const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
-      if (href?.startsWith('http://') || href?.startsWith('https://')) {
+      if (safeHref.startsWith('http://') || safeHref.startsWith('https://')) {
         return `<a href="${escapedHref}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
       }
       return `<a href="${escapedHref}"${titleAttr}>${text}</a>`;
     },
     image({ href, title, text }) {
       const escapedAlt = escapeHtml(text || 'Image');
-      const escapedHref = escapeHtml(href || '');
+      const safeHref = isSafeUrl(href, SAFE_IMAGE_SCHEMES) ? href || '' : '';
+      const escapedHref = escapeHtml(safeHref);
       const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
       // Add decoding="async" for non-blocking decode, loading="lazy" for lazy load
       // Width/height omitted as markdown doesn't provide dimensions - use CSS for sizing

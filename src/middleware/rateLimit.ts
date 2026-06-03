@@ -103,9 +103,10 @@ function getClientId(
     }
   }
 
-  // Fallback: generate a unique ID to prevent all unknown clients sharing one bucket
-  // In production behind a proxy, this should rarely happen
-  return `unknown-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  // Fallback: bucket all unattributed traffic together so it remains rate-limited.
+  // Returning a unique key here would silently disable the limiter for any client
+  // that omits or spoofs the trusted proxy header.
+  return 'unknown';
 }
 
 /**

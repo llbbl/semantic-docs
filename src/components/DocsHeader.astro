@@ -16,6 +16,8 @@ import ThemeSwitcherWithErrorBoundary from './ThemeSwitcherWithErrorBoundary.tsx
         id="mobile-menu-button"
         class="mr-2 lg:hidden inline-flex items-center justify-center rounded-md p-2 hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ring shrink-0"
         aria-label="Toggle menu"
+        aria-expanded="false"
+        aria-controls="docs-sidebar"
       >
         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -58,12 +60,40 @@ import ThemeSwitcherWithErrorBoundary from './ThemeSwitcherWithErrorBoundary.tsx
 </header>
 
 <script>
-  // Mobile menu toggle
+  // Mobile menu toggle. Keeps aria-expanded on the button and the inert/
+  // aria-hidden state of the sidebar in sync so the off-canvas nav is hidden
+  // from assistive tech and keyboard tab order when closed at narrow widths.
   const mobileMenuButton = document.getElementById('mobile-menu-button');
   const sidebar = document.getElementById('docs-sidebar');
 
+  const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
+
+  const syncSidebarA11y = (open: boolean) => {
+    if (!sidebar) return;
+    const hidden = !open && !isDesktop();
+    sidebar.toggleAttribute('inert', hidden);
+    sidebar.setAttribute('aria-hidden', String(hidden));
+  };
+
+  // Initial state: closed on mobile, visible on desktop.
+  syncSidebarA11y(false);
+  window.addEventListener('resize', () => {
+    // Crossing into desktop should reset the menu to closed so that, on the
+    // next narrow viewport, it doesn't reappear already open without the
+    // user re-toggling it.
+    if (isDesktop() && sidebar?.classList.contains('translate-x-0')) {
+      sidebar.classList.remove('translate-x-0');
+      sidebar.classList.add('-translate-x-full');
+      mobileMenuButton?.setAttribute('aria-expanded', 'false');
+    }
+    const open = sidebar?.classList.contains('translate-x-0') ?? false;
+    syncSidebarA11y(open);
+  });
+
   mobileMenuButton?.addEventListener('click', () => {
-    sidebar?.classList.toggle('translate-x-0');
-    sidebar?.classList.toggle('-translate-x-full');
+    const open = sidebar?.classList.toggle('translate-x-0') ?? false;
+    sidebar?.classList.toggle('-translate-x-full', !open);
+    mobileMenuButton.setAttribute('aria-expanded', String(open));
+    syncSidebarA11y(open);
   });
 </script>

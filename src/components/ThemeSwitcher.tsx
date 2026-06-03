@@ -45,12 +45,15 @@ export default function ThemeSwitcher() {
     applyTheme(savedTheme);
   }, [applyTheme]);
 
-  // Reset focus index when menu closes
+  // Move focus into the menu on open (to the current theme), reset on close.
   useEffect(() => {
     if (!isOpen) {
       setFocusedIndex(-1);
+      return;
     }
-  }, [isOpen]);
+    const idx = themes.findIndex((t) => t.name === currentTheme);
+    setFocusedIndex(idx >= 0 ? idx : 0);
+  }, [isOpen, currentTheme]);
 
   // Focus the button when focusedIndex changes
   useEffect(() => {
@@ -122,16 +125,14 @@ export default function ThemeSwitcher() {
 
       {isOpen && (
         <>
-          <button
-            type="button"
-            className="fixed inset-0 z-40 bg-transparent border-0 p-0 cursor-default"
-            onClick={() => setIsOpen(false)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape' || e.key === 'Enter') {
-                setIsOpen(false);
-              }
-            }}
-            aria-label="Close theme menu"
+          {/* Click-away surface. Not focusable: it's a visual region, not an
+              interactive control, and exposing it to assistive tech as a
+              full-viewport "Close theme menu" button is misleading. Escape
+              still closes the menu via handleKeyDown on the menu itself. */}
+          <div
+            className="fixed inset-0 z-40"
+            onMouseDown={() => setIsOpen(false)}
+            aria-hidden="true"
           />
           <div
             ref={menuRef}
