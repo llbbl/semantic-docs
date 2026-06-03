@@ -218,31 +218,53 @@ export default function Search({
             !error &&
             Object.entries(groupedResults).map(([folder, folderResults]) => (
               <CommandGroup key={folder} heading={folder.toUpperCase()}>
-                {folderResults.map((result) => (
-                  <CommandItem
-                    key={result.id}
-                    value={result.title}
-                    onSelect={() => {
-                      window.location.href = `/content/${result.slug}`;
-                      setOpen(false);
-                    }}
-                    className="flex flex-col items-start gap-1 cursor-pointer"
-                  >
-                    <div className="font-medium text-sm">{result.title}</div>
-                    {result.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {result.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-[10px]"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </CommandItem>
-                ))}
+                {folderResults.map((result) => {
+                  const href = `/content/${result.slug}`;
+                  return (
+                    <CommandItem
+                      key={result.id}
+                      value={result.title}
+                      onSelect={() => {
+                        // Keyboard "Enter" path. Mouse clicks call
+                        // stopPropagation on the anchor below so cmdk does
+                        // not also fire this handler, avoiding a double nav.
+                        setOpen(false);
+                        window.location.assign(href);
+                      }}
+                      className="p-0"
+                    >
+                      <a
+                        href={href}
+                        // tabIndex=-1: the surrounding CommandItem already
+                        // has role="option" and owns focus/keyboard. The
+                        // anchor exists only to give the row real link
+                        // semantics for mouse, middle-click, and Cmd-click.
+                        tabIndex={-1}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpen(false);
+                        }}
+                        className="flex flex-col items-start gap-1 w-full px-2 py-1.5"
+                      >
+                        <div className="font-medium text-sm">
+                          {result.title}
+                        </div>
+                        {result.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {result.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-[10px]"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </a>
+                    </CommandItem>
+                  );
+                })}
               </CommandGroup>
             ))}
         </CommandList>

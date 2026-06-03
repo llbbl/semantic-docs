@@ -18,11 +18,14 @@ export default function DocsToc() {
   // Stable callback for IntersectionObserver to prevent unnecessary re-renders
   const handleIntersection = useCallback(
     (entries: IntersectionObserverEntry[]) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting) {
-          setActiveId(entry.target.id);
-          break; // Only set the first intersecting heading
-        }
+      // IntersectionObserver does not guarantee entries are in DOM order;
+      // pick the topmost intersecting heading so the active section matches
+      // what the reader sees, regardless of scroll direction.
+      const topMost = entries
+        .filter((e) => e.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+      if (topMost) {
+        setActiveId(topMost.target.id);
       }
     },
     [],
@@ -34,12 +37,14 @@ export default function DocsToc() {
       document.querySelector('article') || document.querySelector('main');
     if (!article) return;
 
-    const headings = article.querySelectorAll('h2, h3');
-    const items: TocItem[] = Array.from(headings).map((heading) => ({
-      id:
-        heading.id ||
-        heading.textContent?.toLowerCase().replace(/\s+/g, '-') ||
-        '',
+    // The markdown renderer always emits an `id` on h2/h3. Headings without
+    // an id (rare; e.g. authored HTML) are skipped rather than re-slugged with
+    // a divergent algorithm — duplicates would collide silently otherwise.
+    const headings = Array.from(article.querySelectorAll('h2, h3')).filter(
+      (h): h is HTMLElement => h.id.length > 0,
+    );
+    const items: TocItem[] = headings.map((heading) => ({
+      id: heading.id,
       text: heading.textContent || '',
       level: parseInt(heading.tagName.substring(1), 10),
     }));
