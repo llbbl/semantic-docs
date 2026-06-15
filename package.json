@@ -72,7 +72,7 @@
     "@vitest/browser": "^4.1.8",
     "@vitest/coverage-v8": "^4.1.8",
     "@vitest/ui": "^4.1.8",
-    "happy-dom": "^20.9.0",
+    "happy-dom": "^20.10.3",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
