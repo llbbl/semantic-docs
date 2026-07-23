@@ -13,6 +13,7 @@ vi.mock('../../lib/turso', () => ({
 }));
 
 const { search } = await import('@logan/libsql-search');
+const { getTursoClient } = await import('../../lib/turso');
 
 // Helper to create a minimal APIContext for testing
 function createMockContext(request: Request): APIContext {
@@ -82,6 +83,60 @@ describe('Search API Route', () => {
 
       expect(response.status).toBe(400);
       expect(data.error).toBe('Query parameter is required');
+      expect(search).not.toHaveBeenCalled();
+      expect(getTursoClient).not.toHaveBeenCalled();
+    });
+
+    it('should reject a padded one-character query before searching', async () => {
+      const request = new Request('http://localhost/api/search.json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: '  a  ' }),
+      });
+
+      const response = await POST(createMockContext(request));
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe('Query too short');
+      expect(search).not.toHaveBeenCalled();
+      expect(getTursoClient).not.toHaveBeenCalled();
+    });
+
+    it('should reject a whitespace-only query before searching', async () => {
+      const request = new Request('http://localhost/api/search.json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: '   ' }),
+      });
+
+      const response = await POST(createMockContext(request));
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe('Query too short');
+      expect(search).not.toHaveBeenCalled();
+      expect(getTursoClient).not.toHaveBeenCalled();
+    });
+
+    it('should trim a valid query before searching and responding', async () => {
+      const mockResults: SearchResult[] = [];
+      vi.mocked(search).mockResolvedValueOnce(mockResults);
+
+      const request = new Request('http://localhost/api/search.json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: '  test query  ' }),
+      });
+
+      const response = await POST(createMockContext(request));
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.query).toBe('test query');
+      expect(search).toHaveBeenCalledWith(
+        expect.objectContaining({ query: 'test query' }),
+      );
     });
 
     it('should use default limit of 10 when not provided', async () => {
