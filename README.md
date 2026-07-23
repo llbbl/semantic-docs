@@ -18,6 +18,8 @@ A beautiful, dark-mode documentation theme powered by [libsql-search](https://gi
 
 ## Quick Start
 
+Requires Node.js 22.12.0 or newer and pnpm 10.20.0.
+
 ### 1. Clone or Use as Template
 
 ```bash

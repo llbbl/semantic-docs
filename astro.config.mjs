@@ -7,6 +7,8 @@ import { defineConfig } from 'astro/config';
 
 // https://astro.build/config
 export default defineConfig({
+  // Preserve Astro 6's HTML-aware whitespace handling after the Astro 7 upgrade.
+  compressHTML: true,
   output: 'server',
   adapter: node({
     mode: 'standalone',
