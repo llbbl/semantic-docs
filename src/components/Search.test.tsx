@@ -66,6 +66,26 @@ describe('Search Component', () => {
     });
   });
 
+  it('should toggle with the keyboard shortcut and reopen cleanly', async () => {
+    render(<Search />);
+
+    fireEvent.keyDown(document, { key: 'k', ctrlKey: true });
+    const input = await screen.findByPlaceholderText('Search articles...');
+    fireEvent.change(input, { target: { value: 'pending query' } });
+
+    fireEvent.keyDown(document, { key: 'k', ctrlKey: true });
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText('Search articles...')).toBeNull();
+    });
+
+    fireEvent.keyDown(document, { key: 'k', ctrlKey: true });
+    const reopenedInput =
+      await screen.findByPlaceholderText('Search articles...');
+
+    expect((reopenedInput as HTMLInputElement).value).toBe('');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('should not search when query is less than 2 characters', async () => {
     render(<Search />);
     const button = screen.getByRole('button', { name: 'Search' });
@@ -167,6 +187,31 @@ describe('Search Component', () => {
       expect(screen.getByText('DOCS')).toBeDefined();
       expect(screen.getByText('testing')).toBeDefined();
     });
+
+    fireEvent.click(screen.getByRole('link', { name: /Test Article/ }));
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText('Search articles...')).toBeNull();
+    });
+  });
+
+  it('should show an error only for the active request', async () => {
+    vi.mocked(global.fetch).mockResolvedValueOnce({ ok: false } as Response);
+
+    render(<Search />);
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+
+    const input = await screen.findByPlaceholderText('Search articles...');
+    fireEvent.change(input, { target: { value: 'broken query' } });
+
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText('Search failed. Please try again.'),
+        ).toBeDefined();
+        expect(screen.queryByText('Searching...')).toBeNull();
+      },
+      { timeout: 500 },
+    );
   });
 
   it('should let only the active request update results and loading state', async () => {

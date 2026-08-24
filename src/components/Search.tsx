@@ -84,14 +84,6 @@ export default function Search({
   // Debounced search function
   const performSearch = useCallback(
     async (searchQuery: string) => {
-      if (searchQuery.length < 2) {
-        cancelActiveSearch();
-        setResults([]);
-        setLoading(false);
-        setError(null);
-        return;
-      }
-
       cancelActiveSearch();
 
       const controller = new AbortController();
