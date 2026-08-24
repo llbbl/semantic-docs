@@ -11,6 +11,7 @@ import {
   LOCAL_EMBEDDING_DIMENSIONS,
   SEARCH_TABLE_NAME,
 } from '../src/lib/searchConfig';
+import { runContentIndexing } from './index-content-runner';
 
 // Initialize client (Turso or local libSQL)
 const url = process.env.TURSO_DB_URL;
@@ -25,28 +26,21 @@ if (!url || !authToken) {
   logger.info('Using local libSQL database (file:local.db)');
 }
 
-logger.info('Starting content indexing...');
-
-// Create table if it doesn't exist
-await createTable(client, SEARCH_TABLE_NAME, LOCAL_EMBEDDING_DIMENSIONS);
-
-// Index content
-const result = await indexContent({
-  client,
-  contentPath: './content',
-  tableName: SEARCH_TABLE_NAME,
-  embeddingOptions: {
-    provider: 'local',
-    dimensions: LOCAL_EMBEDDING_DIMENSIONS,
+process.exitCode = await runContentIndexing(
+  {
+    createTable: () =>
+      createTable(client, SEARCH_TABLE_NAME, LOCAL_EMBEDDING_DIMENSIONS),
+    indexContent: (onProgress) =>
+      indexContent({
+        client,
+        contentPath: './content',
+        tableName: SEARCH_TABLE_NAME,
+        embeddingOptions: {
+          provider: 'local',
+          dimensions: LOCAL_EMBEDDING_DIMENSIONS,
+        },
+        onProgress,
+      }),
   },
-  onProgress: (current, total, file) => {
-    logger.info(`[${current}/${total}] Indexing: ${file}`);
-  },
-});
-
-logger.info(`Indexing complete!`);
-logger.info(`Successfully indexed ${result.success}/${result.total} documents`);
-
-if (result.failed > 0) {
-  logger.warn(`Failed to index ${result.failed} documents`);
-}
+  logger,
+);
