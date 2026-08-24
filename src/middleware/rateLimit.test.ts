@@ -1,24 +1,152 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { checkRateLimit, createRateLimitHeaders } from './rateLimit';
+import {
+  checkRateLimit,
+  createRateLimiter,
+  createRateLimitHeaders,
+  resolveClientId,
+} from './rateLimit';
+
+describe('resolveClientId', () => {
+  it('uses the direct client address when proxy trust is disabled', () => {
+    const request = new Request('http://localhost/api/search.json', {
+      headers: {
+        'x-forwarded-for': '203.0.113.10',
+        'x-real-ip': '203.0.113.11',
+      },
+    });
+
+    expect(
+      resolveClientId(request, { directClientAddress: '198.51.100.20' }),
+    ).toBe('198.51.100.20');
+  });
+
+  it('falls back to unknown when no trusted or direct address is available', () => {
+    const request = new Request('http://localhost/api/search.json', {
+      headers: { 'x-forwarded-for': '203.0.113.10' },
+    });
+
+    expect(resolveClientId(request)).toBe('unknown');
+  });
+
+  it('uses x-real-ip only when it is explicitly trusted and valid', () => {
+    const request = new Request('http://localhost/api/search.json', {
+      headers: { 'x-real-ip': '203.0.113.12' },
+    });
+
+    expect(
+      resolveClientId(request, {
+        directClientAddress: '198.51.100.20',
+        trustedProxyHeader: 'x-real-ip',
+      }),
+    ).toBe('203.0.113.12');
+  });
+
+  it('rejects malformed x-real-ip values and falls back to the direct address', () => {
+    const request = new Request('http://localhost/api/search.json', {
+      headers: { 'x-real-ip': '203.0.113.12, 198.51.100.1' },
+    });
+
+    expect(
+      resolveClientId(request, {
+        directClientAddress: '198.51.100.20',
+        trustedProxyHeader: 'x-real-ip',
+      }),
+    ).toBe('198.51.100.20');
+  });
+
+  it('uses a single trusted x-forwarded-for client address', () => {
+    const request = new Request('http://localhost/api/search.json', {
+      headers: { 'x-forwarded-for': '203.0.113.30' },
+    });
+
+    expect(
+      resolveClientId(request, {
+        directClientAddress: '198.51.100.20',
+        trustedProxyHeader: 'x-forwarded-for',
+      }),
+    ).toBe('203.0.113.30');
+  });
+
+  it('resolves the nearest untrusted x-forwarded-for address before trusted hops', () => {
+    const request = new Request('http://localhost/api/search.json', {
+      headers: {
+        'x-forwarded-for': '203.0.113.30, 198.51.100.10, 198.51.100.11',
+      },
+    });
+
+    expect(
+      resolveClientId(request, {
+        trustedProxyHeader: 'x-forwarded-for',
+        trustedProxyHops: 1,
+      }),
+    ).toBe('198.51.100.10');
+
+    expect(
+      resolveClientId(request, {
+        trustedProxyHeader: 'x-forwarded-for',
+        trustedProxyHops: 2,
+      }),
+    ).toBe('203.0.113.30');
+  });
+
+  it('rejects malformed x-forwarded-for chains and falls back to the direct address', () => {
+    const request = new Request('http://localhost/api/search.json', {
+      headers: { 'x-forwarded-for': '203.0.113.30, not-an-ip' },
+    });
+
+    expect(
+      resolveClientId(request, {
+        directClientAddress: '198.51.100.20',
+        trustedProxyHeader: 'x-forwarded-for',
+      }),
+    ).toBe('198.51.100.20');
+  });
+
+  it('rejects invalid trusted hop counts and falls back to the direct address', () => {
+    const request = new Request('http://localhost/api/search.json', {
+      headers: { 'x-forwarded-for': '203.0.113.30, 198.51.100.10' },
+    });
+
+    expect(
+      resolveClientId(request, {
+        directClientAddress: '198.51.100.20',
+        trustedProxyHeader: 'x-forwarded-for',
+        trustedProxyHops: 0,
+      }),
+    ).toBe('198.51.100.20');
+  });
+
+  it('accepts IPv6 addresses', () => {
+    const request = new Request('http://localhost/api/search.json', {
+      headers: { 'x-forwarded-for': '2001:db8::1' },
+    });
+
+    expect(
+      resolveClientId(request, {
+        trustedProxyHeader: 'x-forwarded-for',
+      }),
+    ).toBe('2001:db8::1');
+  });
+});
 
 describe('checkRateLimit', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.setSystemTime(0);
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('should allow requests under the limit', () => {
-    const request = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '1.2.3.4' },
-    });
+  it('allows requests under the limit', () => {
+    const limiter = createRateLimiter();
+    const request = new Request('http://localhost/api/search.json');
 
-    const result = checkRateLimit(request, {
+    const result = limiter.checkRateLimit(request, {
       maxRequests: 5,
       windowSeconds: 60,
-      trustedProxyHeader: 'x-forwarded-for',
+      directClientAddress: '198.51.100.1',
     });
 
     expect(result.allowed).toBe(true);
@@ -26,182 +154,161 @@ describe('checkRateLimit', () => {
     expect(result.limit).toBe(5);
   });
 
-  it('should block requests over the limit', () => {
-    // Use unique IP to avoid interference from other tests
-    const request = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '10.20.30.40' },
-    });
-
+  it('blocks requests over the limit', () => {
+    const limiter = createRateLimiter();
+    const request = new Request('http://localhost/api/search.json');
     const config = {
       maxRequests: 3,
       windowSeconds: 60,
-      trustedProxyHeader: 'x-forwarded-for' as const,
+      directClientAddress: '198.51.100.2',
     };
 
-    // Make 3 requests (at limit)
-    const result1 = checkRateLimit(request, config);
-    expect(result1.allowed).toBe(true);
-    expect(result1.remaining).toBe(2);
+    expect(limiter.checkRateLimit(request, config).allowed).toBe(true);
+    expect(limiter.checkRateLimit(request, config).allowed).toBe(true);
+    expect(limiter.checkRateLimit(request, config).allowed).toBe(true);
 
-    const result2 = checkRateLimit(request, config);
-    expect(result2.allowed).toBe(true);
-    expect(result2.remaining).toBe(1);
-
-    const result3 = checkRateLimit(request, config);
-    expect(result3.allowed).toBe(true);
-    expect(result3.remaining).toBe(0);
-
-    // 4th request should be blocked
-    const result4 = checkRateLimit(request, config);
-    expect(result4.allowed).toBe(false);
-    expect(result4.remaining).toBe(0);
+    const blocked = limiter.checkRateLimit(request, config);
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.remaining).toBe(0);
   });
 
-  it('should reset after window expires', () => {
-    const request = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '192.168.1.1' },
-    });
-
+  it('resets after the window expires', () => {
+    const limiter = createRateLimiter();
+    const request = new Request('http://localhost/api/search.json');
     const config = {
       maxRequests: 2,
       windowSeconds: 60,
-      trustedProxyHeader: 'x-forwarded-for' as const,
+      directClientAddress: '198.51.100.3',
     };
 
-    // Exceed limit
-    checkRateLimit(request, config);
-    checkRateLimit(request, config);
-    const blocked = checkRateLimit(request, config);
-    expect(blocked.allowed).toBe(false);
+    limiter.checkRateLimit(request, config);
+    limiter.checkRateLimit(request, config);
+    expect(limiter.checkRateLimit(request, config).allowed).toBe(false);
 
-    // Advance time past window
-    vi.advanceTimersByTime(61 * 1000);
+    vi.advanceTimersByTime(60_001);
 
-    // Should be allowed again
-    const afterReset = checkRateLimit(request, config);
+    const afterReset = limiter.checkRateLimit(request, config);
     expect(afterReset.allowed).toBe(true);
     expect(afterReset.remaining).toBe(1);
   });
 
-  it('should track different IPs separately', () => {
-    const request1 = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '172.16.0.1' },
+  it('tracks different direct client addresses separately', () => {
+    const limiter = createRateLimiter();
+    const request = new Request('http://localhost/api/search.json');
+    const baseConfig = { maxRequests: 2, windowSeconds: 60 };
+
+    limiter.checkRateLimit(request, {
+      ...baseConfig,
+      directClientAddress: '198.51.100.4',
+    });
+    limiter.checkRateLimit(request, {
+      ...baseConfig,
+      directClientAddress: '198.51.100.4',
+    });
+    const blocked = limiter.checkRateLimit(request, {
+      ...baseConfig,
+      directClientAddress: '198.51.100.4',
+    });
+    const otherClient = limiter.checkRateLimit(request, {
+      ...baseConfig,
+      directClientAddress: '198.51.100.5',
     });
 
-    const request2 = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '172.16.0.2' },
+    expect(blocked.allowed).toBe(false);
+    expect(otherClient.allowed).toBe(true);
+  });
+
+  it('does not let spoofed proxy headers create arbitrary buckets when trust is disabled', () => {
+    const limiter = createRateLimiter();
+    const config = {
+      maxRequests: 2,
+      windowSeconds: 60,
+      directClientAddress: '198.51.100.6',
+    };
+    const reqA = new Request('http://localhost/api/search.json', {
+      headers: { 'x-forwarded-for': '203.0.113.1' },
+    });
+    const reqB = new Request('http://localhost/api/search.json', {
+      headers: { 'x-forwarded-for': '203.0.113.2' },
     });
 
+    expect(limiter.checkRateLimit(reqA, config).remaining).toBe(1);
+    expect(limiter.checkRateLimit(reqB, config).remaining).toBe(0);
+    expect(limiter.checkRateLimit(reqA, config).allowed).toBe(false);
+  });
+
+  it('shares one unknown bucket for malformed or unattributed requests', () => {
+    const limiter = createRateLimiter();
     const config = {
       maxRequests: 2,
       windowSeconds: 60,
       trustedProxyHeader: 'x-forwarded-for' as const,
     };
-
-    // Exhaust IP1
-    checkRateLimit(request1, config);
-    checkRateLimit(request1, config);
-    const ip1Blocked = checkRateLimit(request1, config);
-    expect(ip1Blocked.allowed).toBe(false);
-
-    // IP2 should still work
-    const ip2Result = checkRateLimit(request2, config);
-    expect(ip2Result.allowed).toBe(true);
-  });
-
-  it('should handle x-forwarded-for header with trustedProxyHeader', () => {
-    const request = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '203.0.113.1' },
-    });
-
-    const result = checkRateLimit(request, {
-      maxRequests: 10,
-      windowSeconds: 60,
-      trustedProxyHeader: 'x-forwarded-for',
-    });
-    expect(result.allowed).toBe(true);
-  });
-
-  it('should handle x-real-ip header with trustedProxyHeader', () => {
-    const request = new Request('http://localhost/api/search.json', {
-      headers: { 'x-real-ip': '203.0.113.2' },
-    });
-
-    const result = checkRateLimit(request, {
-      maxRequests: 10,
-      windowSeconds: 60,
-      trustedProxyHeader: 'x-real-ip',
-    });
-    expect(result.allowed).toBe(true);
-  });
-
-  it('should ignore proxy headers when trustedProxyHeader is not set', () => {
-    const request = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '1.2.3.4' },
-    });
-
-    // Without trustedProxyHeader, all requests fall back to 'unknown' client ID
-    const result = checkRateLimit(request, {
-      maxRequests: 10,
-      windowSeconds: 60,
-    });
-    expect(result.allowed).toBe(true);
-  });
-
-  it('should reject invalid IP addresses in headers', () => {
-    const request = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': 'invalid-ip-address' },
-    });
-
-    // Invalid IP should fall back to 'unknown' client ID
-    const result = checkRateLimit(request, {
-      maxRequests: 10,
-      windowSeconds: 60,
-      trustedProxyHeader: 'x-forwarded-for',
-    });
-    expect(result.allowed).toBe(true);
-  });
-
-  it('should validate IPv6 addresses', () => {
-    const request = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': '2001:0db8:85a3:0000:0000:8a2e:0370:7334' },
-    });
-
-    const result = checkRateLimit(request, {
-      maxRequests: 10,
-      windowSeconds: 60,
-      trustedProxyHeader: 'x-forwarded-for',
-    });
-    expect(result.allowed).toBe(true);
-  });
-
-  it('should share a single bucket for all unattributed requests', () => {
-    // Regression: a unique-per-request fallback key would silently disable the
-    // limiter for any client that omits or spoofs the trusted proxy header.
-    // Verifies the bucket is shared by checking `remaining` decrements across
-    // requests with different (invalid) header values.
-    const config = {
-      maxRequests: 1000,
-      windowSeconds: 60,
-      trustedProxyHeader: 'x-forwarded-for' as const,
-    };
-    const reqA = new Request('http://localhost/api/search.json', {
+    const malformed = new Request('http://localhost/api/search.json', {
       headers: { 'x-forwarded-for': 'not-an-ip' },
     });
-    const reqB = new Request('http://localhost/api/search.json');
-    const reqC = new Request('http://localhost/api/search.json', {
-      headers: { 'x-forwarded-for': 'also-invalid' },
-    });
+    const missing = new Request('http://localhost/api/search.json');
 
-    const first = checkRateLimit(reqA, config).remaining;
-    const second = checkRateLimit(reqB, config).remaining;
-    const third = checkRateLimit(reqC, config).remaining;
-
-    expect(second).toBe(first - 1);
-    expect(third).toBe(first - 2);
+    expect(limiter.checkRateLimit(malformed, config).remaining).toBe(1);
+    expect(limiter.checkRateLimit(missing, config).remaining).toBe(0);
+    expect(limiter.checkRateLimit(malformed, config).allowed).toBe(false);
   });
 
-  it('should use default config values', () => {
+  it('cleans expired entries opportunistically without keeping a timer alive', () => {
+    const limiter = createRateLimiter({ cleanupIntervalMs: 1 });
+    const request = new Request('http://localhost/api/search.json');
+    const config = { maxRequests: 5, windowSeconds: 1 };
+
+    limiter.checkRateLimit(request, {
+      ...config,
+      directClientAddress: '198.51.100.7',
+    });
+    limiter.checkRateLimit(request, {
+      ...config,
+      directClientAddress: '198.51.100.8',
+    });
+    expect(limiter.size).toBe(2);
+    expect(vi.getTimerCount()).toBe(0);
+
+    vi.advanceTimersByTime(1_001);
+
+    limiter.checkRateLimit(request, {
+      ...config,
+      directClientAddress: '198.51.100.9',
+    });
+    expect(limiter.size).toBe(1);
+  });
+
+  it('bounds the in-memory store by evicting the earliest reset bucket', () => {
+    const limiter = createRateLimiter();
+    const request = new Request('http://localhost/api/search.json');
+    const config = { maxRequests: 5, windowSeconds: 60, maxEntries: 2 };
+
+    limiter.checkRateLimit(request, {
+      ...config,
+      directClientAddress: '198.51.100.10',
+    });
+    vi.advanceTimersByTime(1_000);
+    limiter.checkRateLimit(request, {
+      ...config,
+      directClientAddress: '198.51.100.11',
+    });
+    vi.advanceTimersByTime(1_000);
+    limiter.checkRateLimit(request, {
+      ...config,
+      directClientAddress: '198.51.100.12',
+    });
+
+    expect(limiter.size).toBe(2);
+    expect(
+      limiter.checkRateLimit(request, {
+        ...config,
+        directClientAddress: '198.51.100.10',
+      }).remaining,
+    ).toBe(4);
+  });
+
+  it('uses default config values for the process-wide limiter', () => {
     const request = new Request('http://localhost/api/search.json');
     const result = checkRateLimit(request);
     expect(result.allowed).toBe(true);
@@ -210,12 +317,12 @@ describe('checkRateLimit', () => {
 });
 
 describe('createRateLimitHeaders', () => {
-  it('should create correct headers', () => {
+  it('creates correct headers', () => {
     const result = {
       allowed: true,
       limit: 10,
       remaining: 7,
-      resetTime: 1700000000000,
+      resetTime: 1_700_000_000_000,
     };
 
     const headers = createRateLimitHeaders(result);

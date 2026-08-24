@@ -1,6 +1,6 @@
 import type { SearchResult } from '@logan/libsql-search';
 import type { APIContext } from 'astro';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GET, POST } from './search.json';
 
 // Mock dependencies
@@ -16,13 +16,20 @@ const { search } = await import('@logan/libsql-search');
 const { getTursoClient } = await import('../../lib/turso');
 
 // Helper to create a minimal APIContext for testing
-function createMockContext(request: Request): APIContext {
-  return { request } as APIContext;
+function createMockContext(
+  request: Request,
+  clientAddress?: string,
+): APIContext {
+  return { request, clientAddress } as APIContext;
 }
 
 describe('Search API Route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   describe('POST', () => {
@@ -217,6 +224,52 @@ describe('Search API Route', () => {
           },
         }),
       );
+    });
+
+    it('should ignore spoofed proxy headers by default for rate limiting', async () => {
+      vi.stubEnv('RATE_LIMIT_TRUSTED_PROXY_HEADER', '');
+      vi.mocked(search).mockResolvedValue([]);
+
+      let response: Response | undefined;
+      for (let index = 0; index < 21; index++) {
+        const request = new Request('http://localhost/api/search.json', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-forwarded-for': `203.0.113.${index + 1}`,
+          },
+          body: JSON.stringify({ query: 'test query' }),
+        });
+
+        response = await POST(createMockContext(request, '198.51.100.100'));
+      }
+
+      expect(response?.status).toBe(429);
+      expect(search).toHaveBeenCalledTimes(20);
+    });
+
+    it('should use the configured trusted proxy header for rate limiting', async () => {
+      vi.stubEnv('RATE_LIMIT_TRUSTED_PROXY_HEADER', 'x-real-ip');
+      vi.mocked(search).mockResolvedValue([]);
+
+      let response: Response | undefined;
+      for (let index = 0; index < 21; index++) {
+        const request = new Request('http://localhost/api/search.json', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-real-ip': '203.0.113.200',
+          },
+          body: JSON.stringify({ query: 'test query' }),
+        });
+
+        response = await POST(
+          createMockContext(request, `198.51.100.${index + 101}`),
+        );
+      }
+
+      expect(response?.status).toBe(429);
+      expect(search).toHaveBeenCalledTimes(20);
     });
   });
 

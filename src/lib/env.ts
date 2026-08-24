@@ -49,6 +49,16 @@ export function getRequiredEnv(key: string): string {
   return value;
 }
 
+export type RateLimitTrustedProxyHeader = 'x-real-ip' | 'x-forwarded-for';
+
+function getPositiveInteger(key: string, defaultValue: number): number {
+  const value = getEnv(key);
+  if (value === undefined) return defaultValue;
+
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : defaultValue;
+}
+
 /**
  * Environment configuration object
  * Provides typed access to commonly used environment variables
@@ -73,6 +83,24 @@ export const env = {
    */
   get hasTursoCredentials(): boolean {
     return Boolean(this.tursoDbUrl && this.tursoAuthToken);
+  },
+
+  /** Proxy header explicitly trusted for rate-limit client identity */
+  get rateLimitTrustedProxyHeader(): RateLimitTrustedProxyHeader | undefined {
+    const value = getEnv('RATE_LIMIT_TRUSTED_PROXY_HEADER');
+    return value === 'x-real-ip' || value === 'x-forwarded-for'
+      ? value
+      : undefined;
+  },
+
+  /** Trusted proxy hops at the right side of X-Forwarded-For */
+  get rateLimitTrustedProxyHops(): number {
+    return getPositiveInteger('RATE_LIMIT_TRUSTED_PROXY_HOPS', 1);
+  },
+
+  /** Maximum in-memory rate-limit buckets retained per process */
+  get rateLimitMaxEntries(): number {
+    return getPositiveInteger('RATE_LIMIT_MAX_ENTRIES', 10_000);
   },
 
   /**
