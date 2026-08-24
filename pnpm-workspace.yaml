@@ -16,6 +16,8 @@ overrides:
   smol-toml: ^1.6.1
   vite: ^8.0.13
 
-onlyBuiltDependencies:
-  - sharp
-  - "@xenova/transformers"
+allowBuilds:
+  esbuild: true
+  onnxruntime-node: true
+  protobufjs: true
+  sharp: true

@@ -7,13 +7,14 @@ import DocsSidebar from '@/components/DocsSidebar.astro';
 import DocsTocWithErrorBoundary from '@/components/DocsTocWithErrorBoundary.tsx';
 import DocsLayout from '@/layouts/DocsLayout.astro';
 import { marked } from '@/lib/markdown';
+import { SEARCH_TABLE_NAME } from '@/lib/searchConfig';
 import { getTursoClient } from '@/lib/turso';
 import type { Article } from '@/types/article';
 
 // Generate static paths for all articles at build time
 export async function getStaticPaths() {
   const client = getTursoClient();
-  const allArticles = await getAllArticles(client);
+  const allArticles = await getAllArticles(client, SEARCH_TABLE_NAME);
 
   return allArticles.map((article) => ({
     params: { slug: article.slug },
@@ -33,7 +34,7 @@ if (!slug) {
 }
 
 const client = getTursoClient();
-const article = await getArticleBySlug(client, slug);
+const article = await getArticleBySlug(client, slug, SEARCH_TABLE_NAME);
 
 if (!article) {
   throw new Error(`Article not found for prerendered slug: ${slug}`);

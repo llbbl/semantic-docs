@@ -5,6 +5,7 @@
  */
 
 import { getAllArticles } from '@logan/libsql-search';
+import { SEARCH_TABLE_NAME } from '@/lib/searchConfig';
 import { getTursoClient } from '@/lib/turso';
 import { formatFolderName } from '@/lib/utils';
 import type { ArticleSummary } from '@/types/article';
@@ -22,7 +23,10 @@ if (Astro.props.articles) {
   allArticles = Astro.props.articles;
 } else {
   const client = getTursoClient();
-  allArticles = (await getAllArticles(client)) as ArticleSummary[];
+  allArticles = (await getAllArticles(
+    client,
+    SEARCH_TABLE_NAME,
+  )) as ArticleSummary[];
 }
 
 const articlesByFolder = allArticles.reduce(
@@ -82,4 +86,3 @@ const articlesByFolder = allArticles.reduce(
     </nav>
   </div>
 </aside>
-

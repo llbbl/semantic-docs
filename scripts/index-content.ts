@@ -7,6 +7,10 @@
 import { createClient } from '@libsql/client';
 import { createTable, indexContent } from '@logan/libsql-search';
 import { logger } from 'logan-logger';
+import {
+  LOCAL_EMBEDDING_DIMENSIONS,
+  SEARCH_TABLE_NAME,
+} from '../src/lib/searchConfig';
 
 // Initialize client (Turso or local libSQL)
 const url = process.env.TURSO_DB_URL;
@@ -24,15 +28,16 @@ if (!url || !authToken) {
 logger.info('Starting content indexing...');
 
 // Create table if it doesn't exist
-await createTable(client, 'articles', 768);
+await createTable(client, SEARCH_TABLE_NAME, LOCAL_EMBEDDING_DIMENSIONS);
 
 // Index content
 const result = await indexContent({
   client,
   contentPath: './content',
+  tableName: SEARCH_TABLE_NAME,
   embeddingOptions: {
     provider: 'local',
-    dimensions: 768,
+    dimensions: LOCAL_EMBEDDING_DIMENSIONS,
   },
   onProgress: (current, total, file) => {
     logger.info(`[${current}/${total}] Indexing: ${file}`);

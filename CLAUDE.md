@@ -66,7 +66,7 @@ pnpm format     # Format all files
 ### Database Integration
 - **src/lib/turso.ts**: Singleton client wrapper, re-exports libsql-search utilities
 - **scripts/init-db.ts**: Initializes database schema with vector search support
-- **scripts/index-content.ts**: Indexes markdown files, creates table with 768-dimension vectors
+- **scripts/index-content.ts**: Indexes markdown files into `articles_local_384` with native 384-dimension local vectors
 - All content queries use functions from libsql-search: `getAllArticles()`, `getArticleBySlug()`, `getArticlesByFolder()`, `getFolders()`
 
 ### Environment Variables
@@ -118,13 +118,13 @@ The project relies heavily on libsql-search. When modifying search behavior:
 1. Check libsql-search documentation for available options
 2. Update `scripts/index-content.ts` for indexing changes
 3. Update `src/pages/api/search.json.ts` for search query changes
-4. Maintain embedding dimension consistency (768) across indexing and search
+4. Maintain embedding dimension consistency (384) across schema creation, indexing, and search
 
 ### Customizing Embeddings
-The embedding dimension (768) must match across:
-- `scripts/index-content.ts` (createTable and indexContent)
+The local embedding dimension (384) must match across:
+- `src/lib/searchConfig.ts`, `scripts/init-db.ts`, and `scripts/index-content.ts`
 - Search API
-- Re-index content after changing the embedding model or dimension
+- Re-index into a new table after changing the embedding model or dimension; the current table is `articles_local_384`
 
 ### Styling
 - Uses Tailwind CSS 4 via Vite plugin
@@ -160,6 +160,7 @@ netlify deploy --prod
 
 ### Deployment Requirements
 - **Always run** `pnpm index` (or `pnpm index:local` for testing) before deploying to ensure content is indexed
+- When upgrading from the legacy 768-dimension index, run `pnpm db:init` before `pnpm index` to create and populate `articles_local_384`; retire the old `articles` table separately after validation
 - Set environment variables (`TURSO_DB_URL`, `TURSO_AUTH_TOKEN`, etc.) in your deployment platform's dashboard
 - only run "pnpm lint:fix" or "biome check --write ." if there are less than 5 files to be modified and the changes are simple, otherwise fix linter issues manually
 
