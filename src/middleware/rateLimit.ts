@@ -1,34 +1,18 @@
 /**
- * Simple in-memory rate limiter
- * For production with multiple servers, use Redis or edge rate limiting
+ * Bounded in-memory rate limiter.
+ * For production with multiple servers, use shared or edge rate limiting.
  */
+
+import { isIP } from 'node:net';
 
 interface RateLimitEntry {
   count: number;
   resetTime: number;
 }
 
-const rateLimitStore = new Map<string, RateLimitEntry>();
-
-/** Cleanup interval for expired rate limit entries (5 minutes) */
+const DEFAULT_MAX_ENTRIES = 10_000;
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 
-// Cleanup old entries periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (now > entry.resetTime) {
-      rateLimitStore.delete(key);
-    }
-  }
-}, CLEANUP_INTERVAL_MS);
-
-/**
- * Trusted proxy header sources - in order of trust priority
- * x-real-ip: Set by nginx/other proxies, should be from trusted proxy only
- * x-forwarded-for: Can contain multiple IPs; only trust it when your proxy
- *   sanitizes the header and you can reliably use the leftmost client IP.
- */
 export type TrustedProxyHeader = 'x-real-ip' | 'x-forwarded-for';
 
 export interface RateLimitConfig {
@@ -36,13 +20,17 @@ export interface RateLimitConfig {
   maxRequests: number;
   /** Window duration in seconds */
   windowSeconds: number;
-  /**
-   * Trusted proxy header to use for client IP resolution
-   * - 'x-real-ip': Use when behind nginx with real_ip module
-   * - 'x-forwarded-for': Use with caution - only the rightmost non-private IP should be trusted
-   * - undefined: Don't trust proxy headers (direct connections only)
-   */
+  /** Direct peer address supplied by the server adapter */
+  directClientAddress?: string;
+  /** Proxy header to trust only when the deployment explicitly enables it */
   trustedProxyHeader?: TrustedProxyHeader;
+  /**
+   * Number of trusted proxy hops at the right side of X-Forwarded-For.
+   * The resolved client is the nearest untrusted address before those hops.
+   */
+  trustedProxyHops?: number;
+  /** Maximum number of client buckets retained in this process */
+  maxEntries?: number;
 }
 
 export interface RateLimitResult {
@@ -52,105 +40,175 @@ export interface RateLimitResult {
   resetTime: number;
 }
 
-/**
- * Validate IP address format (IPv4 or IPv6)
- * Prevents malicious header values from being used as rate limit keys
- */
-function isValidIpAddress(ip: string): boolean {
-  // IPv4 pattern
-  const ipv4Regex =
-    /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+export interface RateLimiter {
+  checkRateLimit: (
+    request: Request,
+    config?: RateLimitConfig,
+  ) => RateLimitResult;
+  readonly size: number;
+}
 
-  // IPv6 pattern (simplified - covers most valid formats)
-  const ipv6Regex =
-    /^(?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4}$|^::(?:[a-fA-F0-9]{1,4}:){0,6}[a-fA-F0-9]{1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,7}:$|^(?:[a-fA-F0-9]{1,4}:){1,6}:[a-fA-F0-9]{1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,5}(?::[a-fA-F0-9]{1,4}){1,2}$|^(?:[a-fA-F0-9]{1,4}:){1,4}(?::[a-fA-F0-9]{1,4}){1,3}$|^(?:[a-fA-F0-9]{1,4}:){1,3}(?::[a-fA-F0-9]{1,4}){1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,2}(?::[a-fA-F0-9]{1,4}){1,5}$|^[a-fA-F0-9]{1,4}:(?::[a-fA-F0-9]{1,4}){1,6}$/;
+export interface RateLimiterOptions {
+  cleanupIntervalMs?: number;
+}
 
-  return ipv4Regex.test(ip) || ipv6Regex.test(ip);
+function normalizeIpAddress(value: string | null | undefined): string | null {
+  const address = value?.trim();
+  return address && isIP(address) !== 0 ? address : null;
+}
+
+function getTrustedProxyAddress(
+  request: Request,
+  header: TrustedProxyHeader,
+  trustedProxyHops: number,
+): string | null {
+  const value = request.headers.get(header);
+  if (!value) return null;
+
+  if (header === 'x-real-ip') {
+    // X-Real-IP must be a single address written by the trusted proxy.
+    return value.includes(',') ? null : normalizeIpAddress(value);
+  }
+
+  if (!Number.isSafeInteger(trustedProxyHops) || trustedProxyHops < 1) {
+    return null;
+  }
+
+  const chain = value.split(',').map((address) => address.trim());
+  if (chain.length === 0 || chain.some((address) => isIP(address) === 0)) {
+    return null;
+  }
+
+  const clientIndex = Math.max(0, chain.length - trustedProxyHops - 1);
+  return chain[clientIndex] ?? null;
 }
 
 /**
- * Get client identifier from request
- * @param request - The incoming request
- * @param trustedProxyHeader - Which proxy header to trust for IP resolution
+ * Resolve the bucket identifier for a request.
+ * Forwarding headers are ignored unless an explicit trusted header is set.
  */
-function getClientId(
+export function resolveClientId(
   request: Request,
-  trustedProxyHeader?: TrustedProxyHeader,
+  config: Pick<
+    RateLimitConfig,
+    'directClientAddress' | 'trustedProxyHeader' | 'trustedProxyHops'
+  > = {},
 ): string {
-  if (trustedProxyHeader) {
-    let proxyIp: string | null = null;
-
-    switch (trustedProxyHeader) {
-      case 'x-real-ip':
-        // nginx real_ip module - trusted if nginx is configured correctly
-        proxyIp = request.headers.get('x-real-ip');
-        break;
-      case 'x-forwarded-for':
-        // X-Forwarded-For format: "client, proxy1, proxy2, ..."
-        // The leftmost IP is the original client IP as reported to the first proxy.
-        // We take the leftmost IP because it represents the originating client.
-        // Security note: The leftmost IP can be spoofed if upstream proxies don't
-        // strip or validate existing X-Forwarded-For headers from incoming requests.
-        // For higher security, prefer x-real-ip from trusted proxies.
-        proxyIp =
-          request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
-        break;
-    }
-
-    // Validate the IP to prevent header injection attacks
-    if (proxyIp && isValidIpAddress(proxyIp)) {
-      return proxyIp;
-    }
+  if (config.trustedProxyHeader) {
+    const proxyAddress = getTrustedProxyAddress(
+      request,
+      config.trustedProxyHeader,
+      config.trustedProxyHops ?? 1,
+    );
+    if (proxyAddress) return proxyAddress;
   }
 
-  // Fallback: bucket all unattributed traffic together so it remains rate-limited.
-  // Returning a unique key here would silently disable the limiter for any client
-  // that omits or spoofs the trusted proxy header.
-  return 'unknown';
+  return normalizeIpAddress(config.directClientAddress) ?? 'unknown';
 }
 
 /**
- * Check if request is rate limited
+ * Create an isolated limiter. Expired entries are cleaned opportunistically on
+ * requests, avoiding a referenced interval that can keep a process alive.
  */
-export function checkRateLimit(
-  request: Request,
-  config: RateLimitConfig = {
-    maxRequests: 10,
-    windowSeconds: 60,
-  },
-): RateLimitResult {
-  const clientId = getClientId(request, config.trustedProxyHeader);
-  const now = Date.now();
-  const windowMs = config.windowSeconds * 1000;
+export function createRateLimiter(
+  options: RateLimiterOptions = {},
+): RateLimiter {
+  const store = new Map<string, RateLimitEntry>();
+  const cleanupIntervalMs =
+    options.cleanupIntervalMs && options.cleanupIntervalMs > 0
+      ? options.cleanupIntervalMs
+      : CLEANUP_INTERVAL_MS;
+  let nextCleanupTime = 0;
 
-  let entry = rateLimitStore.get(clientId);
-
-  // Reset if window expired
-  if (!entry || now > entry.resetTime) {
-    entry = {
-      count: 0,
-      resetTime: now + windowMs,
-    };
-    rateLimitStore.set(clientId, entry);
+  function cleanupExpiredEntries(now: number): void {
+    for (const [key, entry] of store.entries()) {
+      if (now >= entry.resetTime) {
+        store.delete(key);
+      }
+    }
   }
 
-  // Increment count
-  entry.count++;
+  function evictEarliestReset(): void {
+    let candidate: string | undefined;
+    let earliestReset = Number.POSITIVE_INFINITY;
 
-  const allowed = entry.count <= config.maxRequests;
-  const remaining = Math.max(0, config.maxRequests - entry.count);
+    for (const [key, entry] of store.entries()) {
+      if (entry.resetTime < earliestReset) {
+        candidate = key;
+        earliestReset = entry.resetTime;
+      }
+    }
+
+    if (candidate !== undefined) {
+      store.delete(candidate);
+    }
+  }
+
+  function checkRateLimit(
+    request: Request,
+    config: RateLimitConfig = {
+      maxRequests: 10,
+      windowSeconds: 60,
+    },
+  ): RateLimitResult {
+    const clientId = resolveClientId(request, config);
+    const now = Date.now();
+    const windowMs = config.windowSeconds * 1000;
+    const maxEntries =
+      config.maxEntries &&
+      Number.isSafeInteger(config.maxEntries) &&
+      config.maxEntries > 0
+        ? config.maxEntries
+        : DEFAULT_MAX_ENTRIES;
+
+    if (now >= nextCleanupTime) {
+      cleanupExpiredEntries(now);
+      nextCleanupTime = now + cleanupIntervalMs;
+    }
+
+    let entry = store.get(clientId);
+
+    if (!entry || now >= entry.resetTime) {
+      while (store.size >= maxEntries) {
+        evictEarliestReset();
+      }
+
+      entry = {
+        count: 0,
+        resetTime: now + windowMs,
+      };
+      store.set(clientId, entry);
+    }
+
+    entry.count++;
+
+    return {
+      allowed: entry.count <= config.maxRequests,
+      limit: config.maxRequests,
+      remaining: Math.max(0, config.maxRequests - entry.count),
+      resetTime: entry.resetTime,
+    };
+  }
 
   return {
-    allowed,
-    limit: config.maxRequests,
-    remaining,
-    resetTime: entry.resetTime,
+    checkRateLimit,
+    get size() {
+      return store.size;
+    },
   };
 }
 
-/**
- * Create rate limit response headers
- */
+const defaultRateLimiter = createRateLimiter();
+
+/** Check whether a request is rate limited by the process-wide limiter. */
+export function checkRateLimit(
+  request: Request,
+  config?: RateLimitConfig,
+): RateLimitResult {
+  return defaultRateLimiter.checkRateLimit(request, config);
+}
+
+/** Create rate-limit response headers. */
 export function createRateLimitHeaders(
   result: RateLimitResult,
 ): Record<string, string> {

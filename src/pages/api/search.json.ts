@@ -105,7 +105,7 @@ const securityHeaders = {
   'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
 };
 
-export const POST: APIRoute = async ({ request, site }) => {
+export const POST: APIRoute = async ({ request, site, clientAddress }) => {
   // CSRF protection: validate origin
   if (!validateOrigin(request, site)) {
     return new Response(
@@ -123,13 +123,15 @@ export const POST: APIRoute = async ({ request, site }) => {
     );
   }
 
-  // Rate limiting: 20 requests per minute per IP
-  // Use 'x-forwarded-for' for common proxy setups.
-  // Change to 'x-real-ip' for nginx or undefined for direct connections.
+  // Rate limiting: 20 requests per minute per resolved client identity.
+  // Proxy headers remain disabled unless explicitly configured as trusted.
   const rateLimitResult = checkRateLimit(request, {
     maxRequests: 20,
     windowSeconds: 60,
-    trustedProxyHeader: 'x-forwarded-for',
+    directClientAddress: clientAddress,
+    trustedProxyHeader: env.rateLimitTrustedProxyHeader,
+    trustedProxyHops: env.rateLimitTrustedProxyHops,
+    maxEntries: env.rateLimitMaxEntries,
   });
 
   const rateLimitHeaders = {

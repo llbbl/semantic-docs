@@ -1,7 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { env, getEnv, getRequiredEnv } from './env';
 
-const TEST_KEYS = ['TEST_KEY', 'TURSO_DB_URL', 'TURSO_AUTH_TOKEN', 'NODE_ENV'];
+const TEST_KEYS = [
+  'TEST_KEY',
+  'TURSO_DB_URL',
+  'TURSO_AUTH_TOKEN',
+  'NODE_ENV',
+  'RATE_LIMIT_TRUSTED_PROXY_HEADER',
+  'RATE_LIMIT_TRUSTED_PROXY_HOPS',
+  'RATE_LIMIT_MAX_ENTRIES',
+];
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -73,5 +81,35 @@ describe('env getters', () => {
 
     vi.stubEnv('NODE_ENV', 'test');
     expect(env.isTest).toBe(true);
+  });
+
+  it('should expose supported rate limit proxy headers', () => {
+    vi.stubEnv('RATE_LIMIT_TRUSTED_PROXY_HEADER', 'x-forwarded-for');
+    expect(env.rateLimitTrustedProxyHeader).toBe('x-forwarded-for');
+
+    vi.stubEnv('RATE_LIMIT_TRUSTED_PROXY_HEADER', 'x-real-ip');
+    expect(env.rateLimitTrustedProxyHeader).toBe('x-real-ip');
+  });
+
+  it('should ignore unsupported rate limit proxy headers', () => {
+    vi.stubEnv('RATE_LIMIT_TRUSTED_PROXY_HEADER', 'forwarded');
+
+    expect(env.rateLimitTrustedProxyHeader).toBeUndefined();
+  });
+
+  it('should default invalid rate limit integers', () => {
+    vi.stubEnv('RATE_LIMIT_TRUSTED_PROXY_HOPS', '0');
+    vi.stubEnv('RATE_LIMIT_MAX_ENTRIES', 'not-a-number');
+
+    expect(env.rateLimitTrustedProxyHops).toBe(1);
+    expect(env.rateLimitMaxEntries).toBe(10_000);
+  });
+
+  it('should expose valid rate limit integers', () => {
+    vi.stubEnv('RATE_LIMIT_TRUSTED_PROXY_HOPS', '2');
+    vi.stubEnv('RATE_LIMIT_MAX_ENTRIES', '500');
+
+    expect(env.rateLimitTrustedProxyHops).toBe(2);
+    expect(env.rateLimitMaxEntries).toBe(500);
   });
 });

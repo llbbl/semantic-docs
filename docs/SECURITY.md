@@ -5,9 +5,10 @@
 The search API (`/api/search.json`) includes built-in rate limiting to prevent abuse:
 
 ### Default Limits
-- **20 requests per minute** per IP address
+- **20 requests per minute** per resolved client identity
 - **500 character** maximum query length
 - **20 results** maximum per query
+- **10,000** in-memory rate limit buckets per server process by default
 
 ### Rate Limit Headers
 All API responses include standard rate limit headers:
@@ -33,12 +34,51 @@ Retry-After: 42
 X-RateLimit-Remaining: 0
 ```
 
+### Client Identity and Trusted Proxies
+
+By default, the rate limiter ignores `X-Forwarded-For` and `X-Real-IP` because
+clients can spoof those headers. Requests are bucketed by the direct client
+address reported by the Astro server adapter. If no direct address is available,
+the limiter uses a shared `unknown` bucket instead of creating a unique
+unlimited bucket per request.
+
+Enable proxy-derived identity only when the application is reachable exclusively
+through trusted infrastructure that overwrites or safely appends the selected
+header:
+
+```bash
+RATE_LIMIT_TRUSTED_PROXY_HEADER=x-real-ip
+# or
+RATE_LIMIT_TRUSTED_PROXY_HEADER=x-forwarded-for
+RATE_LIMIT_TRUSTED_PROXY_HOPS=1
+```
+
+Use `x-real-ip` when your proxy overwrites it with exactly one validated client
+address. Use `x-forwarded-for` only when your proxy strips untrusted incoming
+values or appends to a chain you understand. `RATE_LIMIT_TRUSTED_PROXY_HOPS`
+counts trusted proxy entries from the right side of the `X-Forwarded-For` chain;
+the limiter uses the nearest untrusted address before those hops. For example:
+
+```text
+X-Forwarded-For: 203.0.113.10, 198.51.100.20, 198.51.100.21
+RATE_LIMIT_TRUSTED_PROXY_HOPS=1 -> 198.51.100.20
+RATE_LIMIT_TRUSTED_PROXY_HOPS=2 -> 203.0.113.10
+```
+
+Malformed proxy headers are rejected and fall back to the direct client address
+or the shared `unknown` bucket. Unsupported values for
+`RATE_LIMIT_TRUSTED_PROXY_HEADER` leave proxy trust disabled.
+
 ## Deployment Considerations
 
 ### Single Server (Current Implementation)
 - In-memory rate limiting
-- Works for: Netlify, Vercel serverless functions
-- Limitation: Each function instance has its own counter
+- Works for: Node.js server deployments and serverless functions
+- Limitation: Each process or function instance has its own counter
+- Expired entries are cleaned opportunistically on requests; no background
+  interval is kept alive
+- The bucket store is bounded by `RATE_LIMIT_MAX_ENTRIES` and evicts the bucket
+  with the earliest reset time when full
 
 ### Production Recommendations
 
