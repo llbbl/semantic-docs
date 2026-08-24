@@ -5,7 +5,10 @@ tags: [astro, theme, documentation, semantic-search]
 
 # Semantic Docs Theme Overview
 
-Semantic Docs is a modern documentation theme built with Astro, featuring semantic vector search powered by libSQL and Turso. It combines static site generation with server-rendered search capabilities for a fast, searchable documentation experience.
+Semantic Docs is an Astro documentation theme with semantic search powered by
+`@logan/libsql-search` and a libSQL/Turso-compatible index. It combines
+pre-rendered article pages with a server-rendered search API so the site stays
+fast while search remains dynamic.
 
 **Reference Implementation**: Check out [Astro Vault](https://vault.llbbl.com) ([source](https://github.com/llbbl/astro-vault)) to see this theme in action with extensive documentation content.
 
@@ -13,9 +16,9 @@ Semantic Docs is a modern documentation theme built with Astro, featuring semant
 
 ### Semantic Vector Search
 - **Vector embeddings**: Content is indexed with 384-dimension embeddings
-- **Local embeddings**: Runs on-device with no API keys required
+- **Repo default**: The bundled setup uses libsql-search configured as `provider: 'local'`
 - **Fast semantic search**: Natural language queries return relevant results
-- **Edge-optimized**: Runs on Turso's edge database for low latency
+- **Flexible database path**: Works with a local libSQL file in development and Turso in remote deployments
 
 ### Static Site Generation
 - **Pre-rendered pages**: All documentation pages are built at compile time
@@ -27,13 +30,13 @@ Semantic Docs is a modern documentation theme built with Astro, featuring semant
 - **Rate limiting**: 20 requests per minute per IP
 - **Debounced requests**: Client waits 300ms before sending query
 - **Security**: Query validation, result limits, XSS protection
-- **Real-time**: Search API runs on Node.js adapter
+- **Real-time**: Search API runs through Astro's Node adapter
 
 ### Modern Tech Stack
-- **Astro 5**: Latest version with hybrid rendering
+- **Astro 7**: Server output with pre-rendered content routes
 - **Tailwind CSS 4**: Utility-first CSS with custom themes
 - **React 19**: For interactive components (search, TOC)
-- **TypeScript**: Full type safety across the codebase
+- **TypeScript 7**: Full type safety across the codebase
 - **Biome**: Fast linting and formatting
 - **Vitest**: Unit testing with browser mode
 
@@ -46,7 +49,7 @@ Semantic Docs is a modern documentation theme built with Astro, featuring semant
 │  or  local.db (Development)             │
 │                                         │
 │  - Vector embeddings (384-dim)          │
-│  - Full-text search                     │
+│  - Vector search index                  │
 │  - Metadata (tags, folders)             │
 └─────────────────────────────────────────┘
            ↑
@@ -64,7 +67,7 @@ Semantic Docs is a modern documentation theme built with Astro, featuring semant
 1. **Markdown files** in `./content/` directory
 2. **Indexing script** (`scripts/index-content.ts`) processes files:
    - Extracts frontmatter (title, tags)
-   - Generates embeddings
+   - Generates embeddings through libsql-search's configured provider
    - Stores in database with vectors
 3. **Build process** pre-renders all pages using database content
 4. **Runtime** serves static pages + dynamic search API
@@ -73,7 +76,7 @@ Semantic Docs is a modern documentation theme built with Astro, featuring semant
 1. User types query in search box
 2. Client debounces input (300ms)
 3. POST request to `/api/search.json` with `{ query, limit }`
-4. Server performs semantic search on Turso
+4. Server performs semantic search on the configured libSQL database
 5. Results ranked by cosine similarity
 6. Client displays results in dropdown
 
@@ -82,9 +85,11 @@ Semantic Docs is a modern documentation theme built with Astro, featuring semant
 ```
 semantic-docs/
 ├── content/               # Markdown documentation files
-│   ├── getting-started/  # Getting started guides
-│   ├── features/         # Feature documentation
-│   ├── theme/            # Theme documentation
+│   ├── getting-started/   # Getting started guides
+│   ├── features/          # Feature documentation
+│   ├── theme/             # Theme documentation
+│   └── ...
+├── docs/                  # Repo-level setup and operations docs
 │   └── ...
 ├── src/
 │   ├── components/       # Astro & React components
@@ -93,47 +98,51 @@ semantic-docs/
 │   │   ├── DocsToc.tsx
 │   │   └── Search.tsx
 │   ├── layouts/          # Page layouts
-│   │   └── Layout.astro
+│   │   └── DocsLayout.astro
 │   ├── pages/            # Route pages
 │   │   ├── index.astro
 │   │   ├── content/[...slug].astro
 │   │   └── api/search.json.ts
-│   ├── lib/              # Utilities
-│   │   └── turso.ts      # Database client
+│   ├── lib/              # Search config, env, and DB helpers
+│   │   ├── searchConfig.ts
+│   │   └── turso.ts
+│   ├── middleware/       # Rate limiting and request protections
 │   └── styles/           # Global styles
 │       └── global.css
 ├── scripts/              # Build scripts
 │   ├── init-db.ts        # Initialize database schema
 │   └── index-content.ts  # Index markdown to database
-└── public/               # Static assets
+├── justfile              # Optional task runner
+└── package.json
 ```
 
 ## Configuration
 
 ### Environment Variables
 ```bash
-# Production (Turso)
+# Remote libSQL / Turso
 TURSO_DB_URL=libsql://your-db.turso.io
 TURSO_AUTH_TOKEN=your-token
-
 ```
+
+When those values are not set, the project falls back to `file:local.db`.
 
 ### Astro Configuration
 ```typescript
 // astro.config.mjs
 export default defineConfig({
-  output: 'server',           // Hybrid rendering
-  adapter: node(),            // Node.js adapter for search API
-  integrations: [
-    react(),                  // React for interactive components
-    tailwindcss(),           // Tailwind CSS 4
-  ],
+  output: 'server',
+  adapter: node({ mode: 'standalone' }),
+  integrations: [react()],
+  vite: {
+    plugins: [tailwindcss()],
+  },
 });
 ```
 
 ## Theme System
 
-Astro Vault includes 6 built-in themes that can be switched at runtime:
+semantic-docs includes 6 built-in themes that can be switched at runtime:
 
 - **Dark** (default): High contrast dark theme
 - **Light**: Clean light theme
@@ -144,54 +153,25 @@ Astro Vault includes 6 built-in themes that can be switched at runtime:
 
 Themes are implemented with CSS variables and can be customized in `src/styles/global.css`.
 
-## Performance
+## Working in This Repo
 
-### Build Performance
-- **Incremental builds**: Only changed files are rebuilt
-- **Parallel processing**: Multiple pages built concurrently
-- **Fast embeddings**: Local embeddings run on CPU/GPU
-- **Efficient bundling**: Astro's optimized build pipeline
+Run the content index before builds so the database matches your Markdown:
 
-### Runtime Performance
-- **Static pages**: < 100ms load time
-- **Search latency**: ~50-200ms (Turso edge network)
-- **Small bundle size**: ~50KB JavaScript (gzipped)
-- **Lighthouse score**: 95+ on all metrics
-
-## Deployment
-
-### Docker
 ```bash
-# Build with Turso credentials
-docker build \
-  --build-arg TURSO_DB_URL=libsql://your-db.turso.io \
-  --build-arg TURSO_AUTH_TOKEN=your-token \
-  -t astro-vault .
-
-# Run
-docker run -p 4321:4321 \
-  -e TURSO_DB_URL=libsql://your-db.turso.io \
-  -e TURSO_AUTH_TOKEN=your-token \
-  astro-vault
+pnpm db:init:local
+pnpm index:local
+TURSO_DB_URL=file:local.db TURSO_AUTH_TOKEN=local pnpm build
 ```
 
-### Coolify
-1. Set build arguments: `TURSO_DB_URL`, `TURSO_AUTH_TOKEN`
-2. Set runtime environment variables (same values)
-3. Deploy - content is automatically indexed during build
-
-### Other Platforms
-- **Vercel**: Use `@astrojs/vercel` adapter
-- **Netlify**: Use `@astrojs/netlify` adapter
-- **Cloud Run**: Use Docker image
-- **Fly.io**: Use Docker image
+For remote libSQL/Turso deployments, use `pnpm db:init` and `pnpm index`
+instead.
 
 ## Customization
 
 ### Adding Content
 1. Create markdown files in `content/` directory
 2. Add frontmatter with title and tags
-3. Deploy - content is indexed automatically
+3. Re-run the index command before building or deploying
 
 ### Styling
 - Edit `src/styles/global.css` for global styles
