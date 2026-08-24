@@ -93,11 +93,12 @@ const results = await db.execute(`
 
 ## Embedding Generation
 
-### libsql-search Local Provider
+### Repo Default
 
-semantic-docs delegates embedding generation to libsql-search. The default local
-provider runs without an API key, while keeping the provider implementation out
-of the application code:
+semantic-docs delegates embedding generation to libsql-search. The current repo
+configuration uses `provider: 'local'` with 384-dimension vectors, while
+keeping the provider implementation out of the application code. The repo
+depends on that contract, not on a specific underlying embedding engine:
 
 ```typescript
 import { generateEmbedding } from '@logan/libsql-search';
@@ -113,8 +114,13 @@ console.log(embedding); // [0.123, -0.456, 0.789, ...]
 ## Implementation in semantic-docs
 
 ### Indexing Content
+
+Simplified example of the indexing flow. The real implementation also uses
+shared constants from `src/lib/searchConfig.ts` and routes the work through
+`runContentIndexing`:
+
 ```typescript
-// scripts/index-content.ts
+// Simplified example
 import { createTable, indexContent } from '@logan/libsql-search';
 import { getTursoClient } from '../src/lib/turso';
 
@@ -133,8 +139,13 @@ await indexContent({
 ```
 
 ### Searching
+
+Simplified example of the semantic search call. The real
+`src/pages/api/search.json.ts` also validates input, applies rate limiting,
+uses centralized constants, and returns the current API response shape:
+
 ```typescript
-// src/pages/api/search.json.ts
+// Simplified example
 import { search } from '@logan/libsql-search';
 import { getTursoClient } from '../../lib/turso';
 
@@ -257,7 +268,8 @@ const results = await search({
 Full-text search:  10ms
 Semantic search:   50-100ms
 
-Reason: Vector distance calculations are expensive
+Reason: Vector distance calculations and embedding generation are more
+expensive than keyword-only matching
 ```
 
 ### 2. Requires Vector Index
@@ -271,13 +283,13 @@ CREATE INDEX idx_embedding ON articles(libsql_vector_idx(embedding));
 
 ### 3. Cold Start Problem
 ```javascript
-// First query in session
+// First query in a fresh process or cache
 const embedding = await generateEmbedding(query);
-// Takes 200-500ms to initialize model
+// Often slower while the configured provider warms up
 
 // Subsequent queries
 const embedding2 = await generateEmbedding(query2);
-// Takes 20-50ms (model cached)
+// Usually faster once provider resources are ready
 ```
 
 ### 4. Context Window Limits
@@ -337,10 +349,10 @@ async function hybridSearch(query: string) {
 
 ## Embeddings
 
-### Local Provider
+### Repo Default
 ```typescript
-// Pros: Free, private, no API limits
-// Cons: Slower, uses CPU/GPU
+// Pros: No extra embedding credentials in the bundled setup
+// Tradeoff: Latency and resource cost depend on the configured provider
 
 import { generateEmbedding } from '@logan/libsql-search';
 
@@ -368,6 +380,6 @@ const embedding = await generateEmbedding(text, {
 
 ## Resources
 
-- **Transformers.js**: [huggingface.co/docs/transformers.js](https://huggingface.co/docs/transformers.js)
+- **libsql-search**: [github.com/llbbl/libsql-search](https://github.com/llbbl/libsql-search)
 - **Sentence Transformers**: [sbert.net](https://www.sbert.net/)
 - **Vector Search Explained**: [pinecone.io/learn/vector-database](https://www.pinecone.io/learn/vector-database/)

@@ -2,324 +2,75 @@
 
 [![Coverage](https://img.shields.io/codecov/c/github/llbbl/semantic-docs?label=coverage)](https://codecov.io/gh/llbbl/semantic-docs) [![CI](https://github.com/llbbl/semantic-docs/actions/workflows/ci.yml/badge.svg)](https://github.com/llbbl/semantic-docs/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/llbbl/semantic-docs)](https://github.com/llbbl/semantic-docs/releases)
 
-Documentation theme with semantic vector search.
+`semantic-docs` is an Astro documentation theme with built-in semantic search powered by [`@logan/libsql-search`](https://github.com/llbbl/libsql-search). It gives you static docs pages, a server-rendered search API, and a libSQL/Turso-backed content index without adding a separate hosted search product.
 
-A beautiful, dark-mode documentation theme powered by [libsql-search](https://github.com/llbbl/libsql-search) for semantic search capabilities. Perfect for technical documentation, knowledge bases, and content-heavy sites.
+Use it when you want:
 
-## Features
+- semantic search over Markdown content with a small operational footprint
+- a docs site you can ship quickly without giving up control of layout, content, or deployment
+- a lightweight alternative to bolting on a hosted search product
 
-- 🎨 **Modern Dark UI** - Sleek design with OKLCH colors
-- 🔍 **Semantic Search** - AI-powered vector search in the header
-- 📱 **Responsive** - Mobile-friendly with collapsible sidebar
-- 📑 **Auto TOC** - Table of contents generated from headings
-- 🚀 **Edge-Ready** - Optimized for Turso's global database
-- ⚡ **Fast** - Static generation with server-rendered search
-- 🎯 **Type-Safe** - Full TypeScript support
+## What You Get
+
+- Semantic search in the header, backed by libSQL/Turso
+- Static article pages with a server-rendered search endpoint
+- Sidebar navigation and table of contents generated from your content
+- A local development path that works without Turso credentials
 
 ## Quick Start
 
-Requires Node.js 22.13.0 or newer and pnpm 11.
-
-### 1. Clone or Use as Template
+Requires Node.js `>=22.13.0` and pnpm `11`.
 
 ```bash
 git clone https://github.com/llbbl/semantic-docs.git
 cd semantic-docs
-```
-
-Or use as a template on GitHub.
-
-### 2. Install Dependencies
-
-```bash
 pnpm install
-```
-
-Optional: use the `justfile` task runner for common commands:
-
-```bash
-just
-just dev
-just test
-```
-
-See `docs/just.md` for the full list of recipes.
-
-### 3. Set Up Environment
-
-Copy `.env.example` to `.env` and add your credentials:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
-
-```env
-TURSO_DB_URL=libsql://your-database.turso.io
-TURSO_AUTH_TOKEN=your-auth-token
-```
-
-**Get Turso credentials:**
-
-```bash
-# Install Turso CLI
-curl -sSfL https://get.tur.so/install.sh | bash
-
-# Sign up and authenticate
-turso auth signup
-
-# Create a database
-turso db create my-docs
-
-# Get credentials
-turso db show my-docs
-```
-
-### 4. Add Your Content
-
-Create markdown files in `./content`:
-
-```bash
-mkdir -p content/getting-started
-echo "# Hello World\n\nThis is my first article." > content/getting-started/intro.md
-```
-
-**Front matter support:**
-
-```markdown
----
-title: Getting Started
-tags: [tutorial, beginner]
----
-
-# Getting Started
-
-Your content here...
-```
-
-### 5. Index Content
-
-```bash
-# Initialize database and index content to Turso
-pnpm db:init
-pnpm index
-
-# Or use local database without Turso (for testing)
 pnpm db:init:local
 pnpm index:local
-```
-
-This will:
-- Scan your markdown files
-- Generate embeddings (using libsql-search's local provider by default)
-- Store everything in Turso (or local.db with `:local` commands)
-
-### 6. Start Development
-
-```bash
 pnpm dev
 ```
 
-Visit `http://localhost:4321` to see your docs!
+Open `http://localhost:4321`.
 
-## Customization
+The local path works without Turso credentials. The current repo defaults to the
+`articles_local_384` index with libsql-search configured as `provider: 'local'`
+at 384 dimensions. When you want a remote libSQL/Turso database, switch to the
+`.env`-driven commands in the docs.
 
-### Change Site Title
+## Documentation
 
-Edit `src/components/DocsHeader.astro`:
+- [Docs index](./docs/README.md)
+- [Setup and indexing](./docs/GETTING_STARTED.md)
+- [Deployment notes](./docs/DEPLOYMENT.md)
+- [Project reference](./docs/REFERENCE.md)
+- [Security considerations](./docs/SECURITY.md)
+- [Just task runner](./docs/just.md)
 
-```astro
-<span class="font-sans">Your Site Name</span>
-```
+## Content Shape
 
-And `src/layouts/DocsLayout.astro`:
+Store Markdown under `./content` using folder-based sections:
 
-```astro
-const { title = "Your Site Name", description = "Your description" } = Astro.props;
-```
-
-### Customize Colors
-
-Edit `src/styles/global.css` to change the color scheme. The theme uses OKLCH colors for smooth gradients and perceptual uniformity.
-
-### Embeddings
-
-Semantic search uses libsql-search's local embedding provider by default, so no API keys are required in the default setup.
-
-The local provider uses native 384-dimension vectors stored in the
-`articles_local_384` table. Deployments upgrading from the legacy 768-dimension
-index must run `pnpm db:init` and `pnpm index` before building. The old
-`articles` table is left intact for rollback and can be retired separately after
-the new index is verified.
-
-## Project Structure
-
-```
-semantic-docs/
-├── src/
-│   ├── components/
-│   │   ├── DocsHeader.astro    # Header with search
-│   │   ├── DocsSidebar.astro   # Navigation sidebar
-│   │   ├── DocsToc.tsx         # Table of contents
-│   │   └── Search.tsx          # Search component
-│   ├── layouts/
-│   │   └── DocsLayout.astro    # Main layout
-│   ├── lib/
-│   │   └── turso.ts            # Database client
-│   ├── pages/
-│   │   ├── api/
-│   │   │   └── search.json.ts  # Search API endpoint
-│   │   ├── content/
-│   │   │   └── [...slug].astro # Article pages
-│   │   └── index.astro         # Home page
-│   └── styles/
-│       └── global.css          # Global styles
-├── scripts/
-│   └── index-content.js        # Indexing script
-├── content/                    # Your markdown files
-├── astro.config.mjs
-├── package.json
-└── .env                        # Your credentials
-```
-
-## Deployment
-
-### Container-Based Platforms (Recommended)
-
-This project is designed to run on platforms that support Docker containers, such as:
-
-- [Railway](https://railway.app)
-- [Render](https://render.com)
-- [Fly.io](https://fly.io)
-- Google Cloud Run
-- AWS ECS/Fargate
-- Azure Container Apps
-- Coolify
-
-```bash
-# Build with Node.js adapter (default)
-pnpm build
-
-# The built application runs on Node.js and can be containerized
-# Set environment variables in your platform's dashboard
-```
-
-**Important:** Always run `pnpm index` before deploying to ensure content is indexed.
-
-### Vercel / Netlify
-
-> **Note**: These platforms have not been tested and cannot be recommended at this time.
-
-```bash
-# Build with Node.js adapter (default)
-pnpm build
-
-# Deploy
-vercel
-# or
-netlify deploy --prod
-
-# Add environment variables in platform dashboard
-```
-
-## Content Organization
-
-The theme automatically organizes content by folder:
-
-```
+```text
 content/
 ├── getting-started/
-│   ├── intro.md
-│   └── installation.md
+│   └── intro.md
 ├── guides/
-│   ├── configuration.md
 │   └── deployment.md
 └── reference/
     └── api.md
 ```
 
-Folders become collapsible sections in the sidebar.
+Folders become sidebar groups, and frontmatter can define titles and tags.
 
-## Search
-
-The search bar in the header provides semantic search:
-
-- **Semantic matching**: Finds content by meaning, not just keywords
-- **Instant results**: Real-time as you type
-- **Smart ranking**: Most relevant results first
-- **Tag display**: Shows article tags in results
-
-Try searching for concepts rather than exact phrases!
-
-## Build for Production
+## Development Checks
 
 ```bash
-# Index content
-pnpm index
-
-# Build site
-pnpm build
-
-# Preview
-pnpm preview
+pnpm format
+pnpm lint
+pnpm exec tsc --noEmit
+pnpm test
 ```
-
-## Troubleshooting
-
-### Search not working
-
-1. Check `.env` file has correct credentials
-2. Ensure `output: 'server'` in `astro.config.mjs`
-3. Verify content is indexed: run `pnpm index`
-
-### Content not showing
-
-1. Run `pnpm index` to index your markdown files
-2. Check content is in `./content` directory
-3. Verify Turso database has data
-
-### Local embedding provider slow
-
-The first run may need to download model assets. Subsequent runs use the local cache.
-
-## Tech Stack
-
-- **Framework**: [Astro](https://astro.build) 5
-- **Search**: [libsql-search](https://github.com/llbbl/libsql-search)
-- **Database**: [Turso](https://turso.tech) (libSQL)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com) 4
-- **UI**: React islands for interactivity
-- **Embeddings**: libsql-search local provider
-
-## Releases
-
-Releases are automated via GitHub Actions on every push to `main`. The version bump is determined by [conventional commit](https://www.conventionalcommits.org/) prefixes:
-
-| Commit Prefix | Version Bump | Example |
-|---|---|---|
-| `feat!:` or `BREAKING CHANGE` | **Major** (v2.0.0) | `feat!: redesign search API` |
-| `feat:` | **Minor** (v1.5.0) | `feat(deps): update 19 dependencies` |
-| `fix:`, `chore:`, `docs:`, etc. | **Patch** (v1.4.1) | `fix: handle empty search query` |
-
-The workflow automatically:
-1. Determines the next version from commit messages since the last tag
-2. Updates `package.json` version
-3. Runs type checking and tests
-4. Creates a version commit and git tag
-5. Generates a changelog with [git-cliff](https://git-cliff.org/) and publishes a GitHub Release
-
-To trigger a **minor** release for dependency updates, use `feat(deps):` instead of `chore(deps):` as the commit prefix.
 
 ## License
 
 MIT
-
-## Support
-
-- [Issues](https://github.com/llbbl/semantic-docs/issues)
-- [Discussions](https://github.com/llbbl/semantic-docs/discussions)
-
-## Credits
-
-Built with [libsql-search](https://github.com/llbbl/libsql-search).
