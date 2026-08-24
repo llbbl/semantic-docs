@@ -1,9 +1,46 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Search from './Search';
 
 // Mock fetch
 global.fetch = vi.fn();
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+
+  return { promise, reject, resolve };
+}
+
+function createSearchResponse(id: number, title: string): Response {
+  return {
+    ok: true,
+    json: async () => ({
+      results: [
+        {
+          id,
+          title,
+          slug: title.toLowerCase().replaceAll(' ', '-'),
+          folder: 'docs',
+          tags: [],
+          distance: 0.5,
+        },
+      ],
+      count: 1,
+      query: title,
+    }),
+  } as Response;
+}
 
 describe('Search Component', () => {
   beforeEach(() => {
@@ -130,6 +167,87 @@ describe('Search Component', () => {
       expect(screen.getByText('DOCS')).toBeDefined();
       expect(screen.getByText('testing')).toBeDefined();
     });
+  });
+
+  it('should let only the active request update results and loading state', async () => {
+    const firstRequest = createDeferred<Response>();
+    const secondRequest = createDeferred<Response>();
+    vi.mocked(global.fetch)
+      .mockReturnValueOnce(firstRequest.promise)
+      .mockReturnValueOnce(secondRequest.promise);
+
+    render(<Search />);
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+
+    const input = await screen.findByPlaceholderText('Search articles...');
+    fireEvent.change(input, { target: { value: 'first query' } });
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1), {
+      timeout: 500,
+    });
+    const firstSignal = vi.mocked(global.fetch).mock.calls[0][1]?.signal;
+
+    fireEvent.change(input, { target: { value: 'second query' } });
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2), {
+      timeout: 500,
+    });
+    expect(firstSignal?.aborted).toBe(true);
+
+    await act(async () => {
+      firstRequest.resolve(createSearchResponse(1, 'Stale Result'));
+      await firstRequest.promise;
+    });
+
+    expect(screen.queryByText('Stale Result')).toBeNull();
+    expect(screen.getByText('Searching...')).toBeDefined();
+
+    await act(async () => {
+      secondRequest.resolve(createSearchResponse(2, 'Second Query Result'));
+      await secondRequest.promise;
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Second Query Result')).toBeDefined();
+      expect(screen.queryByText('Searching...')).toBeNull();
+    });
+  });
+
+  it('should abort and reset an active request when closed and reopened', async () => {
+    const request = createDeferred<Response>();
+    vi.mocked(global.fetch).mockReturnValueOnce(request.promise);
+
+    render(<Search />);
+    const searchButton = screen.getByRole('button', { name: 'Search' });
+    fireEvent.click(searchButton);
+
+    const input = await screen.findByPlaceholderText('Search articles...');
+    fireEvent.change(input, { target: { value: 'in flight' } });
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1), {
+      timeout: 500,
+    });
+    const signal = vi.mocked(global.fetch).mock.calls[0][1]?.signal;
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(signal?.aborted).toBe(true);
+
+    await act(async () => {
+      request.resolve(createSearchResponse(1, 'Late Result'));
+      await request.promise;
+    });
+
+    fireEvent.click(searchButton);
+    const reopenedInput =
+      await screen.findByPlaceholderText('Search articles...');
+
+    expect((reopenedInput as HTMLInputElement).value).toBe('');
+    expect(screen.queryByText('Late Result')).toBeNull();
+    expect(screen.queryByText('Searching...')).toBeNull();
+    expect(screen.queryByText('Search failed. Please try again.')).toBeNull();
+    expect(
+      screen.getByText('Type at least 2 characters to search...'),
+    ).toBeDefined();
   });
 
   it('should show no results message when no results found', async () => {

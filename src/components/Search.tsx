@@ -40,33 +40,62 @@ export default function Search({
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  const cancelActiveSearch = useCallback(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+
+    const activeController = abortControllerRef.current;
+    abortControllerRef.current = null;
+    activeController?.abort();
+  }, []);
+
+  const resetSearch = useCallback(() => {
+    cancelActiveSearch();
+    setQuery('');
+    setResults([]);
+    setLoading(false);
+    setError(null);
+  }, [cancelActiveSearch]);
+
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      setOpen(nextOpen);
+      if (!nextOpen) {
+        resetSearch();
+      }
+    },
+    [resetSearch],
+  );
+
   // Handle ⌘K keyboard shortcut
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((open) => !open);
+        handleOpenChange(!open);
       }
     };
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
-  }, []);
+  }, [handleOpenChange, open]);
 
   // Debounced search function
   const performSearch = useCallback(
     async (searchQuery: string) => {
       if (searchQuery.length < 2) {
+        cancelActiveSearch();
         setResults([]);
+        setLoading(false);
+        setError(null);
         return;
       }
 
-      // Cancel any in-flight request
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
+      cancelActiveSearch();
 
-      // Create new AbortController for this request
-      abortControllerRef.current = new AbortController();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
 
       setLoading(true);
       setError(null);
@@ -79,7 +108,7 @@ export default function Search({
             query: searchQuery,
             limit: maxResults,
           }),
-          signal: abortControllerRef.current.signal,
+          signal: controller.signal,
         });
 
         if (!response.ok) {
@@ -87,8 +116,17 @@ export default function Search({
         }
 
         const data = await response.json();
+
+        if (abortControllerRef.current !== controller) {
+          return;
+        }
+
         setResults(data.results || []);
       } catch (err) {
+        if (abortControllerRef.current !== controller) {
+          return;
+        }
+
         // Ignore AbortError - it's expected when cancelling requests
         if (err instanceof Error && err.name === 'AbortError') {
           return;
@@ -96,52 +134,38 @@ export default function Search({
         setError('Search failed. Please try again.');
         setResults([]);
       } finally {
-        setLoading(false);
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null;
+          setLoading(false);
+        }
       }
     },
-    [maxResults],
+    [cancelActiveSearch, maxResults],
   );
 
   // Handle input changes with debouncing
   const handleValueChange = useCallback(
     (value: string) => {
       setQuery(value);
-
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
+      cancelActiveSearch();
+      setResults([]);
+      setLoading(false);
+      setError(null);
 
       if (value.length >= 2) {
         searchTimeoutRef.current = setTimeout(() => {
+          searchTimeoutRef.current = null;
           performSearch(value);
         }, 300);
-      } else {
-        setResults([]);
       }
     },
-    [performSearch],
+    [cancelActiveSearch, performSearch],
   );
 
   // Cleanup timeout and abort controller on unmount
   useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, []);
-
-  // Reset state when dialog closes
-  useEffect(() => {
-    if (!open) {
-      setQuery('');
-      setResults([]);
-      setError(null);
-    }
-  }, [open]);
+    return cancelActiveSearch;
+  }, [cancelActiveSearch]);
 
   // Group results by folder (memoized to avoid recalculation on each render)
   const groupedResults = useMemo(() => {
@@ -161,7 +185,7 @@ export default function Search({
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => handleOpenChange(true)}
         className="relative w-full h-10 flex items-center justify-center sm:justify-start px-2 py-2 text-left text-sm bg-muted/50 border border-input rounded-lg hover:bg-muted transition-colors sm:px-3 sm:pl-10"
         aria-label="Search"
       >
@@ -189,7 +213,7 @@ export default function Search({
         </kbd>
       </button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
+      <CommandDialog open={open} onOpenChange={handleOpenChange}>
         <CommandInput
           placeholder={placeholder}
           value={query}
@@ -228,7 +252,7 @@ export default function Search({
                         // Keyboard "Enter" path. Mouse clicks call
                         // stopPropagation on the anchor below so cmdk does
                         // not also fire this handler, avoiding a double nav.
-                        setOpen(false);
+                        handleOpenChange(false);
                         window.location.assign(href);
                       }}
                       className="p-0"
@@ -242,7 +266,7 @@ export default function Search({
                         tabIndex={-1}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setOpen(false);
+                          handleOpenChange(false);
                         }}
                         className="flex flex-col items-start gap-1 w-full px-2 py-1.5"
                       >
