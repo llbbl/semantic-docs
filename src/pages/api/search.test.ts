@@ -21,8 +21,11 @@ const testEnv: ValidateOriginEnv = {
 };
 
 // Helper to create a mock Request with specified headers
-function createRequest(headers: Record<string, string> = {}): Request {
-  return new Request('http://localhost/api/search.json', {
+function createRequest(
+  headers: Record<string, string> = {},
+  url = 'http://localhost/api/search.json',
+): Request {
+  return new Request(url, {
     method: 'POST',
     headers,
   });
@@ -290,10 +293,34 @@ describe('validateOrigin', () => {
   });
 
   describe('null/undefined siteUrl', () => {
-    it('should handle undefined siteUrl gracefully in production', () => {
-      const request = createRequest({ origin: 'https://example.com' });
+    it('should use the request URL for same-origin validation in production', () => {
+      const request = createRequest(
+        { origin: 'https://example.com' },
+        'https://example.com/api/search.json',
+      );
 
-      // siteUrl is undefined, so origin can't match - falls through to return false
+      const result = validateOrigin(request, undefined, productionEnv);
+
+      expect(result).toBe(true);
+    });
+
+    it('should use the request URL for same-origin referer validation', () => {
+      const request = createRequest(
+        { referer: 'https://example.com/docs/getting-started' },
+        'https://example.com/api/search.json',
+      );
+
+      const result = validateOrigin(request, undefined, productionEnv);
+
+      expect(result).toBe(true);
+    });
+
+    it('should reject a cross-origin request when siteUrl is undefined', () => {
+      const request = createRequest(
+        { origin: 'https://malicious.com' },
+        'https://example.com/api/search.json',
+      );
+
       const result = validateOrigin(request, undefined, productionEnv);
 
       expect(result).toBe(false);
@@ -381,16 +408,15 @@ describe('validateOrigin', () => {
   });
 
   describe('edge cases', () => {
-    it('should handle malformed referer URL by throwing', () => {
-      // Create a request with a malformed referer
-      // The URL constructor in the function will throw on invalid URLs
+    it('should reject a malformed referer URL', () => {
       const request = createRequest({
         referer: 'not-a-valid-url',
       });
       const siteUrl = createSiteUrl('https://example.com');
 
-      // The URL constructor throws on invalid URLs
-      expect(() => validateOrigin(request, siteUrl, productionEnv)).toThrow();
+      const result = validateOrigin(request, siteUrl, productionEnv);
+
+      expect(result).toBe(false);
     });
 
     it('should handle origin with trailing slash correctly', () => {

@@ -12,6 +12,7 @@ import {
   SEARCH_TABLE_NAME,
 } from '@/lib/searchConfig';
 import { getTursoClient } from '@/lib/turso';
+import { isValidSearchQuery } from '@/lib/validation';
 import { checkRateLimit, createRateLimitHeaders } from '@/middleware/rateLimit';
 
 export const prerender = false;
@@ -46,8 +47,17 @@ export function validateOrigin(
   const origin = request.headers.get('origin');
   const referer = request.headers.get('referer');
 
-  // If no origin header, check referer (some browsers don't send origin on same-origin)
-  const requestOrigin = origin || (referer ? new URL(referer).origin : null);
+  // If no origin header, check referer (some browsers don't send origin on
+  // same-origin requests). Treat malformed headers as invalid instead of
+  // allowing URL parsing errors to escape the request handler.
+  let requestOrigin = origin;
+  if (!requestOrigin && referer) {
+    try {
+      requestOrigin = new URL(referer).origin;
+    } catch {
+      return false;
+    }
+  }
 
   // No origin/referer could be a same-origin request or a non-browser client
   // For API security, we should require origin for POST requests
@@ -60,8 +70,11 @@ export function validateOrigin(
     return false;
   }
 
-  // Check if origin matches the site URL
-  if (siteUrl && requestOrigin === siteUrl.origin) {
+  // Prefer the configured canonical site, but fall back to the actual request
+  // origin so deployments without Astro.site can still validate same-origin
+  // browser requests.
+  const expectedOrigin = siteUrl?.origin ?? new URL(request.url).origin;
+  if (requestOrigin === expectedOrigin) {
     return true;
   }
 
@@ -161,15 +174,27 @@ export const POST: APIRoute = async ({ request, site }) => {
   try {
     const { query, limit = 10 } = body;
 
-    if (!query || typeof query !== 'string') {
+    if (typeof query !== 'string') {
       return new Response(
         JSON.stringify({ error: 'Query parameter is required' }),
         { status: 400, headers: rateLimitHeaders },
       );
     }
 
+    if (!isValidSearchQuery(query)) {
+      return new Response(
+        JSON.stringify({
+          error: 'Query too short',
+          message: 'Query must contain at least 2 non-whitespace characters',
+        }),
+        { status: 400, headers: rateLimitHeaders },
+      );
+    }
+
+    const normalizedQuery = query.trim();
+
     // Limit query length to prevent abuse
-    if (query.length > 500) {
+    if (normalizedQuery.length > 500) {
       return new Response(
         JSON.stringify({
           error: 'Query too long',
@@ -196,7 +221,7 @@ export const POST: APIRoute = async ({ request, site }) => {
     // Perform vector search using centralized env config
     const results = await search({
       client,
-      query,
+      query: normalizedQuery,
       limit: sanitizedLimit,
       tableName: SEARCH_TABLE_NAME,
       embeddingOptions: {
@@ -209,7 +234,7 @@ export const POST: APIRoute = async ({ request, site }) => {
       JSON.stringify({
         results,
         count: results.length,
-        query,
+        query: normalizedQuery,
       }),
       {
         status: 200,
