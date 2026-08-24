@@ -155,8 +155,10 @@ describe('Search API Route', () => {
 
       expect(search).toHaveBeenCalledWith(
         expect.objectContaining({
+          tableName: 'articles_local_384',
           embeddingOptions: {
             provider: 'local',
+            dimensions: 384,
           },
         }),
       );

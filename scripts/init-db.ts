@@ -5,7 +5,12 @@
  */
 
 import { createClient } from '@libsql/client';
+import { createTable } from '@logan/libsql-search';
 import { logger } from 'logan-logger';
+import {
+  LOCAL_EMBEDDING_DIMENSIONS,
+  SEARCH_TABLE_NAME,
+} from '../src/lib/searchConfig';
 
 // Initialize client (Turso or local libSQL)
 const url = process.env.TURSO_DB_URL;
@@ -23,46 +28,17 @@ if (!url || !authToken) {
 logger.info('Initializing database schema...');
 
 try {
-  // Create articles table with vector search support
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS articles (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      slug TEXT UNIQUE NOT NULL,
-      title TEXT NOT NULL,
-      content TEXT NOT NULL,
-      folder TEXT NOT NULL DEFAULT 'root',
-      tags TEXT DEFAULT '[]',
-      embedding F32_BLOB(768),
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    )
-  `);
+  await createTable(client, SEARCH_TABLE_NAME, LOCAL_EMBEDDING_DIMENSIONS);
 
-  logger.info('Articles table created');
-
-  // Create vector index for fast semantic search
-  await client.execute(`
-    CREATE INDEX IF NOT EXISTS articles_embedding_idx
-    ON articles(libsql_vector_idx(embedding))
-  `);
-
-  logger.info('Vector search index created');
-
-  // Create additional indexes for common queries
-  await client.execute(`
-    CREATE INDEX IF NOT EXISTS articles_folder_idx ON articles(folder)
-  `);
-
-  await client.execute(`
-    CREATE INDEX IF NOT EXISTS articles_slug_idx ON articles(slug)
-  `);
-
-  logger.info('Additional indexes created');
+  logger.info(
+    `Created ${SEARCH_TABLE_NAME} with ${LOCAL_EMBEDDING_DIMENSIONS}-dimension embeddings`,
+  );
 
   // Verify table exists
-  const result = await client.execute(`
-    SELECT name FROM sqlite_master WHERE type='table' AND name='articles'
-  `);
+  const result = await client.execute({
+    sql: `SELECT name FROM sqlite_master WHERE type='table' AND name = ?`,
+    args: [SEARCH_TABLE_NAME],
+  });
 
   if (result.rows.length > 0) {
     logger.info('Database schema initialized successfully!');

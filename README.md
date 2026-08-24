@@ -18,7 +18,7 @@ A beautiful, dark-mode documentation theme powered by [libsql-search](https://gi
 
 ## Quick Start
 
-Requires Node.js 22.12.0 or newer and pnpm 10.20.0.
+Requires Node.js 22.13.0 or newer and pnpm 11.
 
 ### 1. Clone or Use as Template
 
@@ -112,7 +112,7 @@ pnpm index:local
 
 This will:
 - Scan your markdown files
-- Generate embeddings (using local model by default)
+- Generate embeddings (using libsql-search's local provider by default)
 - Store everything in Turso (or local.db with `:local` commands)
 
 ### 6. Start Development
@@ -145,7 +145,13 @@ Edit `src/styles/global.css` to change the color scheme. The theme uses OKLCH co
 
 ### Embeddings
 
-Semantic search uses local embeddings by default, so no API keys are required.
+Semantic search uses libsql-search's local embedding provider by default, so no API keys are required in the default setup.
+
+The local provider uses native 384-dimension vectors stored in the
+`articles_local_384` table. Deployments upgrading from the legacy 768-dimension
+index must run `pnpm db:init` and `pnpm index` before building. The old
+`articles` table is left intact for rollback and can be retired separately after
+the new index is verified.
 
 ## Project Structure
 
@@ -273,9 +279,9 @@ pnpm preview
 2. Check content is in `./content` directory
 3. Verify Turso database has data
 
-### Local embedding model slow
+### Local embedding provider slow
 
-First run downloads ~50MB model. Subsequent runs use cache.
+The first run may need to download model assets. Subsequent runs use the local cache.
 
 ## Tech Stack
 
@@ -284,7 +290,7 @@ First run downloads ~50MB model. Subsequent runs use cache.
 - **Database**: [Turso](https://turso.tech) (libSQL)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com) 4
 - **UI**: React islands for interactivity
-- **Embeddings**: Xenova (local)
+- **Embeddings**: libsql-search local provider
 
 ## Releases
 

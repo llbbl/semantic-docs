@@ -7,6 +7,10 @@ import { search } from '@logan/libsql-search';
 import type { APIRoute } from 'astro';
 import { logger } from 'logan-logger';
 import { env } from '@/lib/env';
+import {
+  LOCAL_EMBEDDING_DIMENSIONS,
+  SEARCH_TABLE_NAME,
+} from '@/lib/searchConfig';
 import { getTursoClient } from '@/lib/turso';
 import { checkRateLimit, createRateLimitHeaders } from '@/middleware/rateLimit';
 
@@ -194,8 +198,10 @@ export const POST: APIRoute = async ({ request, site }) => {
       client,
       query,
       limit: sanitizedLimit,
+      tableName: SEARCH_TABLE_NAME,
       embeddingOptions: {
         provider: 'local',
+        dimensions: LOCAL_EMBEDDING_DIMENSIONS,
       },
     });
 

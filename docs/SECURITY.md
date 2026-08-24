@@ -66,7 +66,7 @@ The API limits:
 
 ### Environment-Specific Risks
 
-**Local/Xenova Provider** (Free)
+**Local embedding provider** (Free)
 - Risk: CPU abuse
 - Mitigation: Rate limiting sufficient
 
@@ -123,7 +123,7 @@ Recommended metrics to track:
 - Query patterns
 - Response times
 - Database query counts
-- Embedding API usage
+- Embedding provider usage
 
 Consider setting up alerts for:
 - Spike in 429 responses

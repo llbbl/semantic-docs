@@ -9,7 +9,7 @@ ARG TURSO_DB_URL
 ARG TURSO_AUTH_TOKEN
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@11.23.0 --activate
 
 # Set working directory
 WORKDIR /app
@@ -37,7 +37,7 @@ RUN pnpm build
 FROM node:22-slim AS runtime
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@11.23.0 --activate
 
 # Set working directory
 WORKDIR /app

@@ -15,7 +15,7 @@ Text is converted to high-dimensional vectors (arrays of numbers):
 
 ```javascript
 // Text to embedding
-"javascript async programming" → [0.2, 0.8, 0.1, ..., 0.4]  // 768 dimensions
+"javascript async programming" → [0.2, 0.8, 0.1, ..., 0.4]  // 384 dimensions
 
 // Similar concepts have similar vectors
 "javascript async programming" → [0.2, 0.8, 0.1, ..., 0.4]
@@ -91,88 +91,67 @@ const results = await db.execute(`
 // 3. "Best practices for async JavaScript" (0.45)
 ```
 
-## Embedding Models
+## Embedding Generation
 
-### Sentence Transformers
+### libsql-search Local Provider
 
-Pre-trained models that convert text to vectors:
+semantic-docs delegates embedding generation to libsql-search. The default local
+provider runs without an API key, while keeping the provider implementation out
+of the application code:
 
-```javascript
-import { pipeline } from '@xenova/transformers';
+```typescript
+import { generateEmbedding } from '@logan/libsql-search';
 
-// Load embedding model
-const embedder = await pipeline(
-  'feature-extraction',
-  'Xenova/all-MiniLM-L6-v2'
-);
-
-// Generate embedding
-const text = "javascript async programming";
-const embedding = await embedder(text, {
-  pooling: 'mean',
-  normalize: true
+const embedding = await generateEmbedding('javascript async programming', {
+  provider: 'local',
+  dimensions: 384,
 });
 
-// Result: Float32Array of 384 dimensions
-console.log(embedding.data);  // [0.123, -0.456, 0.789, ...]
+console.log(embedding); // [0.123, -0.456, 0.789, ...]
 ```
 
-### Popular Local Models
-
-| Model | Dimensions | Speed | Quality |
-|-------|------------|-------|---------|
-| all-MiniLM-L6-v2 | 384 | Fast | Good |
-| all-mpnet-base-v2 | 768 | Medium | Better |
-
-## Implementation in Astro Vault
+## Implementation in semantic-docs
 
 ### Indexing Content
 ```typescript
 // scripts/index-content.ts
-import { indexContent } from '@logan/libsql-search';
-import { getTursoClient } from './lib/turso';
+import { createTable, indexContent } from '@logan/libsql-search';
+import { getTursoClient } from '../src/lib/turso';
 
 const client = getTursoClient();
-const articles = [
-  {
-    slug: 'javascript-async',
-    title: 'JavaScript Async Programming',
-    content: 'Learn how to use async/await...',
-    tags: ['javascript', 'async'],
-  },
-  // ... more articles
-];
+await createTable(client, 'articles_local_384', 384);
 
-// Generate embeddings and store with 768-dimensional vectors
-await indexContent(
+await indexContent({
   client,
-  'articles',
-  articles,
-  'local',  // Use local embedding model
-  768       // Embedding dimensions
-);
+  contentPath: './content',
+  tableName: 'articles_local_384',
+  embeddingOptions: {
+    provider: 'local',
+    dimensions: 384,
+  },
+});
 ```
 
 ### Searching
 ```typescript
 // src/pages/api/search.json.ts
-import { searchArticles } from '@logan/libsql-search';
+import { search } from '@logan/libsql-search';
 import { getTursoClient } from '../../lib/turso';
 
-export async function GET({ request }) {
-  const url = new URL(request.url);
-  const query = url.searchParams.get('q') || '';
-
+export async function POST({ request }) {
+  const { query } = await request.json();
   const client = getTursoClient();
 
-  // Semantic search
-  const results = await searchArticles(
+  const results = await search({
     client,
-    'articles',
     query,
-    'local',
-    10
-  );
+    limit: 10,
+    tableName: 'articles_local_384',
+    embeddingOptions: {
+      provider: 'local',
+      dimensions: 384,
+    },
+  });
 
   return new Response(JSON.stringify({ results }), {
     headers: { 'Content-Type': 'application/json' },
@@ -199,10 +178,18 @@ WHERE content LIKE '%deploy%' AND content LIKE '%app%';
 ```
 
 Semantic Search:
-```javascript
+```typescript
 // Understands: user wants to publish/release software
-const results = await searchArticles(client, 'articles',
-  "how do I deploy my app?", 'local', 10);
+const results = await search({
+  client,
+  query: 'how do I deploy my app?',
+  tableName: 'articles_local_384',
+  limit: 10,
+  embeddingOptions: {
+    provider: 'local',
+    dimensions: 384,
+  },
+});
 
 // Results (meaning-based):
 1. "Pushing to production servers" (0.91 similarity)
@@ -278,8 +265,8 @@ Reason: Vector distance calculations are expensive
 -- LibSQL/SQLite
 CREATE INDEX idx_embedding ON articles(libsql_vector_idx(embedding));
 
--- Index size for 10,000 documents with 768-dim embeddings:
--- ~30 MB (vs 5 MB for full-text index)
+-- Index size for 10,000 documents with 384-dim embeddings:
+-- ~15 MB (vs 5 MB for full-text index)
 ```
 
 ### 3. Cold Start Problem
@@ -350,15 +337,17 @@ async function hybridSearch(query: string) {
 
 ## Embeddings
 
-### Local (Xenova Transformers)
+### Local Provider
 ```typescript
 // Pros: Free, private, no API limits
 // Cons: Slower, uses CPU/GPU
 
-import { pipeline } from '@xenova/transformers';
-const embedder = await pipeline('feature-extraction',
-  'Xenova/all-MiniLM-L6-v2');
-const embedding = await embedder(text);
+import { generateEmbedding } from '@logan/libsql-search';
+
+const embedding = await generateEmbedding(text, {
+  provider: 'local',
+  dimensions: 384,
+});
 ```
 
 
@@ -379,6 +368,6 @@ const embedding = await embedder(text);
 
 ## Resources
 
-- **Xenova Transformers**: [huggingface.co/docs/transformers.js](https://huggingface.co/docs/transformers.js)
+- **Transformers.js**: [huggingface.co/docs/transformers.js](https://huggingface.co/docs/transformers.js)
 - **Sentence Transformers**: [sbert.net](https://www.sbert.net/)
 - **Vector Search Explained**: [pinecone.io/learn/vector-database](https://www.pinecone.io/learn/vector-database/)

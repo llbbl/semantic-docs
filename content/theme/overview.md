@@ -12,7 +12,7 @@ Semantic Docs is a modern documentation theme built with Astro, featuring semant
 ## Key Features
 
 ### Semantic Vector Search
-- **Vector embeddings**: Content is indexed with 768-dimension embeddings
+- **Vector embeddings**: Content is indexed with 384-dimension embeddings
 - **Local embeddings**: Runs on-device with no API keys required
 - **Fast semantic search**: Natural language queries return relevant results
 - **Edge-optimized**: Runs on Turso's edge database for low latency
@@ -45,7 +45,7 @@ Semantic Docs is a modern documentation theme built with Astro, featuring semant
 │         Turso (Production)              │
 │  or  local.db (Development)             │
 │                                         │
-│  - Vector embeddings (768-dim)          │
+│  - Vector embeddings (384-dim)          │
 │  - Full-text search                     │
 │  - Metadata (tags, folders)             │
 └─────────────────────────────────────────┘
@@ -72,7 +72,7 @@ Semantic Docs is a modern documentation theme built with Astro, featuring semant
 ### Search Flow
 1. User types query in search box
 2. Client debounces input (300ms)
-3. Fetch request to `/api/search.json?q=query&limit=10`
+3. POST request to `/api/search.json` with `{ query, limit }`
 4. Server performs semantic search on Turso
 5. Results ranked by cosine similarity
 6. Client displays results in dropdown
