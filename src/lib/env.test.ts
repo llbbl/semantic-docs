@@ -66,6 +66,25 @@ describe('env getters', () => {
     expect(env.hasTursoCredentials).toBe(true);
   });
 
+  it('should report Workers AI credentials without exposing them', () => {
+    vi.stubEnv('CLOUDFLARE_ACCOUNT_ID', 'test-account-id');
+    vi.stubEnv('CLOUDFLARE_API_TOKEN', 'test-api-token');
+
+    expect(env.hasCloudflareCredentials).toBe(true);
+    // The token must not be reachable through the shared env object.
+    expect(JSON.stringify(env)).not.toContain('test-api-token');
+  });
+
+  it.each([
+    ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN'],
+    ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'],
+  ])('should require %s alongside %s', (missingVar, presentVar) => {
+    vi.stubEnv(presentVar, 'set');
+    vi.stubEnv(missingVar, '');
+
+    expect(env.hasCloudflareCredentials).toBe(false);
+  });
+
   it('should default NODE_ENV to development', () => {
     vi.stubEnv('NODE_ENV', '');
 
