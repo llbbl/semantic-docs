@@ -47,18 +47,28 @@ TURSO_AUTH_TOKEN=your-auth-token
 
 Without those values, the project falls back to `file:local.db`.
 
+Embeddings additionally require Workers AI credentials in every environment that
+indexes or serves search:
+
+```env
+CLOUDFLARE_ACCOUNT_ID=your-account-id
+CLOUDFLARE_API_TOKEN=your-api-token
+```
+
 ## Upgrade Note
 
-The current default index is `articles_local_384`. If you are upgrading from
-the older 768-dimension path, run:
+The current default index is `articles_cf_bgem3_1024`. Earlier releases embedded
+in-process and wrote `articles_local_384` at 384 dimensions; that provider no
+longer exists, and its vectors are in a different embedding space, so they cannot
+be reused or converted. Rebuild instead:
 
 ```bash
 pnpm db:init
 pnpm index
 ```
 
-The legacy `articles` table can be retired separately after the new index is
-validated.
+The legacy `articles` and `articles_local_384` tables can be retired separately
+once the new index is validated.
 
 ## Platform Notes
 

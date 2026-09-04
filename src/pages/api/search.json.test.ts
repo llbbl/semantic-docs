@@ -26,6 +26,9 @@ function createMockContext(
 describe('Search API Route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Every search path resolves Workers AI credentials before querying.
+    vi.stubEnv('CLOUDFLARE_ACCOUNT_ID', 'test-account-id');
+    vi.stubEnv('CLOUDFLARE_API_TOKEN', 'test-api-token');
   });
 
   afterEach(() => {
@@ -203,7 +206,7 @@ describe('Search API Route', () => {
       expect(data.message).toBe('Request body must be valid JSON.');
     });
 
-    it('should use the local embedding provider', async () => {
+    it('should use the Cloudflare embedding provider', async () => {
       const mockResults: SearchResult[] = [];
       vi.mocked(search).mockResolvedValueOnce(mockResults);
 
@@ -217,14 +220,59 @@ describe('Search API Route', () => {
 
       expect(search).toHaveBeenCalledWith(
         expect.objectContaining({
-          tableName: 'articles_local_384',
-          embeddingOptions: {
-            provider: 'local',
-            dimensions: 384,
-          },
+          tableName: 'articles_cf_bgem3_1024',
+          embeddingOptions: expect.objectContaining({
+            provider: 'cloudflare',
+            accountId: 'test-account-id',
+            apiToken: 'test-api-token',
+            // Guards the table width against the provider's fixed 1024.
+            dimensions: 1024,
+          }),
         }),
       );
     });
+
+    it('should bound the query-time embedding call', async () => {
+      vi.mocked(search).mockResolvedValueOnce([]);
+
+      const request = new Request('http://localhost/api/search.json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: 'test' }),
+      });
+
+      await POST(createMockContext(request));
+
+      const options = vi.mocked(search).mock.calls[0][0];
+      expect(options.embeddingOptions.timeoutMs).toBe(5000);
+      expect(options.embeddingOptions.signal).toBe(request.signal);
+    });
+
+    it.each(['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'])(
+      'should fail the request when %s is missing',
+      async (missingVar) => {
+        vi.stubEnv(missingVar, '');
+
+        const request = new Request('http://localhost/api/search.json', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: 'test' }),
+        });
+
+        const response = await POST(createMockContext(request));
+        const data = await response.json();
+
+        expect(response.status).toBe(500);
+        expect(data.error).toBe('Search failed');
+
+        // Neither the variable name nor either credential value reaches the client.
+        const serialized = JSON.stringify(data);
+        expect(serialized).not.toContain('CLOUDFLARE');
+        expect(serialized).not.toContain('test-api-token');
+        expect(serialized).not.toContain('test-account-id');
+        expect(search).not.toHaveBeenCalled();
+      },
+    );
 
     it('should ignore spoofed proxy headers by default for rate limiting', async () => {
       vi.stubEnv('RATE_LIMIT_TRUSTED_PROXY_HEADER', '');

@@ -8,7 +8,8 @@ import type { APIRoute } from 'astro';
 import { logger } from 'logan-logger';
 import { env } from '@/lib/env';
 import {
-  LOCAL_EMBEDDING_DIMENSIONS,
+  getEmbeddingOptions,
+  SEARCH_EMBEDDING_TIMEOUT_MS,
   SEARCH_TABLE_NAME,
 } from '@/lib/searchConfig';
 import { getTursoClient } from '@/lib/turso';
@@ -226,10 +227,11 @@ export const POST: APIRoute = async ({ request, site, clientAddress }) => {
       query: normalizedQuery,
       limit: sanitizedLimit,
       tableName: SEARCH_TABLE_NAME,
-      embeddingOptions: {
-        provider: 'local',
-        dimensions: LOCAL_EMBEDDING_DIMENSIONS,
-      },
+      embeddingOptions: getEmbeddingOptions({
+        timeoutMs: SEARCH_EMBEDDING_TIMEOUT_MS,
+        // Abandon the upstream call when the client goes away.
+        signal: request.signal,
+      }),
     });
 
     return new Response(
