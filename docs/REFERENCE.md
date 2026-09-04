@@ -27,15 +27,15 @@ semantic-docs/
 ## Search Path
 
 1. `scripts/index-content.ts` reads Markdown from `./content`.
-2. `@logan/libsql-search` indexes the content into `articles_local_384`.
+2. `@logan/libsql-search` embeds it through Cloudflare Workers AI and indexes it into `articles_cf_bgem3_1024`.
 3. Article pages are pre-rendered with Astro.
 4. `/api/search.json` performs semantic search at request time.
 
 ## Current Search Defaults
 
-- table: `articles_local_384`
-- vector width: `384`
-- provider: `local`
+- table: `articles_cf_bgem3_1024`
+- vector width: `1024` (fixed by `@cf/baai/bge-m3`)
+- provider: `cloudflare` (Workers AI; requires `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`)
 - local development database: `file:local.db` when Turso credentials are absent
 
 Those values are defined in [searchConfig.ts](../src/lib/searchConfig.ts).

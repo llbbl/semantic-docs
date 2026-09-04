@@ -8,7 +8,7 @@ import { createClient } from '@libsql/client';
 import { createTable } from '@logan/libsql-search';
 import { logger } from 'logan-logger';
 import {
-  LOCAL_EMBEDDING_DIMENSIONS,
+  EMBEDDING_DIMENSIONS,
   SEARCH_TABLE_NAME,
 } from '../src/lib/searchConfig';
 
@@ -28,10 +28,10 @@ if (!url || !authToken) {
 logger.info('Initializing database schema...');
 
 try {
-  await createTable(client, SEARCH_TABLE_NAME, LOCAL_EMBEDDING_DIMENSIONS);
+  await createTable(client, SEARCH_TABLE_NAME, EMBEDDING_DIMENSIONS);
 
   logger.info(
-    `Created ${SEARCH_TABLE_NAME} with ${LOCAL_EMBEDDING_DIMENSIONS}-dimension embeddings`,
+    `Created ${SEARCH_TABLE_NAME} with ${EMBEDDING_DIMENSIONS}-dimension embeddings`,
   );
 
   // Verify table exists

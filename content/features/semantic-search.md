@@ -15,7 +15,7 @@ Text is converted to high-dimensional vectors (arrays of numbers):
 
 ```javascript
 // Text to embedding
-"javascript async programming" → [0.2, 0.8, 0.1, ..., 0.4]  // 384 dimensions
+"javascript async programming" → [0.2, 0.8, 0.1, ..., 0.4]  // 1024 dimensions
 
 // Similar concepts have similar vectors
 "javascript async programming" → [0.2, 0.8, 0.1, ..., 0.4]
@@ -96,16 +96,19 @@ const results = await db.execute(`
 ### Repo Default
 
 semantic-docs delegates embedding generation to libsql-search. The current repo
-configuration uses `provider: 'local'` with 384-dimension vectors, while
-keeping the provider implementation out of the application code. The repo
-depends on that contract, not on a specific underlying embedding engine:
+configuration uses `provider: 'cloudflare'`, which serves `@cf/baai/bge-m3` at a
+fixed 1024 dimensions. libsql-search has no in-process embedding runtime; every
+provider it supports is an external service, so indexed text and search queries
+leave the machine. The repo depends on the provider contract, not on a specific
+embedding engine:
 
 ```typescript
 import { generateEmbedding } from '@logan/libsql-search';
 
 const embedding = await generateEmbedding('javascript async programming', {
-  provider: 'local',
-  dimensions: 384,
+  provider: 'cloudflare',
+  accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
+  apiToken: process.env.CLOUDFLARE_API_TOKEN,
 });
 
 console.log(embedding); // [0.123, -0.456, 0.789, ...]
@@ -125,15 +128,16 @@ import { createTable, indexContent } from '@logan/libsql-search';
 import { getTursoClient } from '../src/lib/turso';
 
 const client = getTursoClient();
-await createTable(client, 'articles_local_384', 384);
+await createTable(client, 'articles_cf_bgem3_1024', 1024);
 
 await indexContent({
   client,
   contentPath: './content',
-  tableName: 'articles_local_384',
+  tableName: 'articles_cf_bgem3_1024',
   embeddingOptions: {
-    provider: 'local',
-    dimensions: 384,
+    provider: 'cloudflare',
+    accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
+    apiToken: process.env.CLOUDFLARE_API_TOKEN,
   },
 });
 ```
@@ -157,10 +161,11 @@ export async function POST({ request }) {
     client,
     query,
     limit: 10,
-    tableName: 'articles_local_384',
+    tableName: 'articles_cf_bgem3_1024',
     embeddingOptions: {
-      provider: 'local',
-      dimensions: 384,
+      provider: 'cloudflare',
+      accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
+      apiToken: process.env.CLOUDFLARE_API_TOKEN,
     },
   });
 
@@ -194,11 +199,12 @@ Semantic Search:
 const results = await search({
   client,
   query: 'how do I deploy my app?',
-  tableName: 'articles_local_384',
+  tableName: 'articles_cf_bgem3_1024',
   limit: 10,
   embeddingOptions: {
-    provider: 'local',
-    dimensions: 384,
+    provider: 'cloudflare',
+    accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
+    apiToken: process.env.CLOUDFLARE_API_TOKEN,
   },
 });
 
@@ -277,19 +283,17 @@ expensive than keyword-only matching
 -- LibSQL/SQLite
 CREATE INDEX idx_embedding ON articles(libsql_vector_idx(embedding));
 
--- Index size for 10,000 documents with 384-dim embeddings:
--- ~15 MB (vs 5 MB for full-text index)
+-- Index size for 10,000 documents with 1024-dim embeddings:
+-- ~41 MB of raw vectors (10,000 x 1024 x 4 bytes), vs ~5 MB for full-text
 ```
 
-### 3. Cold Start Problem
+### 3. Network Round Trip Per Query
 ```javascript
-// First query in a fresh process or cache
+// Every query embeds through the provider's API before the vector search runs
 const embedding = await generateEmbedding(query);
-// Often slower while the configured provider warms up
+// Adds provider latency to each request, and fails when the provider does
 
-// Subsequent queries
-const embedding2 = await generateEmbedding(query2);
-// Usually faster once provider resources are ready
+// There is no in-process fallback; a provider outage takes search down
 ```
 
 ### 4. Context Window Limits
@@ -351,14 +355,15 @@ async function hybridSearch(query: string) {
 
 ### Repo Default
 ```typescript
-// Pros: No extra embedding credentials in the bundled setup
-// Tradeoff: Latency and resource cost depend on the configured provider
+// Pros: No model to host, and bge-m3 is a strong multilingual retrieval model
+// Tradeoff: Requires Workers AI credentials, and sends your text to Cloudflare
 
 import { generateEmbedding } from '@logan/libsql-search';
 
 const embedding = await generateEmbedding(text, {
-  provider: 'local',
-  dimensions: 384,
+  provider: 'cloudflare',
+  accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
+  apiToken: process.env.CLOUDFLARE_API_TOKEN,
 });
 ```
 
@@ -381,5 +386,6 @@ const embedding = await generateEmbedding(text, {
 ## Resources
 
 - **libsql-search**: [github.com/llbbl/libsql-search](https://github.com/llbbl/libsql-search)
+- **Cloudflare `@cf/baai/bge-m3`**: [developers.cloudflare.com/workers-ai/models/bge-m3](https://developers.cloudflare.com/workers-ai/models/bge-m3/)
 - **Sentence Transformers**: [sbert.net](https://www.sbert.net/)
 - **Vector Search Explained**: [pinecone.io/learn/vector-database](https://www.pinecone.io/learn/vector-database/)
