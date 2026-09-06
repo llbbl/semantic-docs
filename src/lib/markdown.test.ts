@@ -92,6 +92,12 @@ describe('marked', () => {
       const result = await marked('[Example](https://example.com "Title")');
       expect(result).toContain('title="Title"');
     });
+
+    it('should drop the href of a link with an empty target', async () => {
+      const result = await marked('[Example]()');
+      expect(result).toContain('<a>Example</a>');
+      expect(result).not.toContain('href');
+    });
   });
 
   describe('images', () => {
@@ -108,6 +114,17 @@ describe('marked', () => {
     it('should handle image titles', async () => {
       const result = await marked('![Alt](image.jpg "Image title")');
       expect(result).toContain('title="Image title"');
+    });
+
+    it('should fall back to a default alt when the image has none', async () => {
+      const result = await marked('![](https://example.com/a.png)');
+      expect(result).toContain('alt="Image"');
+    });
+
+    it('should drop the src of an image with an empty target', async () => {
+      const result = await marked('![Alt]()');
+      expect(result).toContain('<img alt="Alt"');
+      expect(result).not.toContain('src=');
     });
   });
 

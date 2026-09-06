@@ -10,7 +10,10 @@ import { slugify } from './utils';
 const SAFE_LINK_SCHEMES = ['http:', 'https:', 'mailto:', 'tel:'];
 const SAFE_IMAGE_SCHEMES = ['http:', 'https:', 'data:'];
 
-function isSafeUrl(href: string | undefined, schemes: string[]): boolean {
+function isSafeUrl(
+  href: string | undefined,
+  schemes: string[],
+): href is string {
   if (!href) return false;
   // Browsers tolerate leading whitespace in href/src, so the scheme check
   // must run against the trimmed value too — otherwise `"  javascript:..."`
@@ -62,7 +65,7 @@ function createParser(): Marked {
       },
       link({ href, title, tokens }) {
         const text = this.parser.parseInline(tokens);
-        const safeHref = isSafeUrl(href, SAFE_LINK_SCHEMES) ? href || '' : '';
+        const safeHref = isSafeUrl(href, SAFE_LINK_SCHEMES) ? href : '';
         const escapedHref = escapeHtml(safeHref);
         const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
         if (safeHref.startsWith('http://') || safeHref.startsWith('https://')) {
@@ -72,7 +75,7 @@ function createParser(): Marked {
       },
       image({ href, title, text }) {
         const escapedAlt = escapeHtml(text || 'Image');
-        const safeHref = isSafeUrl(href, SAFE_IMAGE_SCHEMES) ? href || '' : '';
+        const safeHref = isSafeUrl(href, SAFE_IMAGE_SCHEMES) ? href : '';
         const escapedHref = escapeHtml(safeHref);
         const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
         // Add decoding="async" for non-blocking decode, loading="lazy" for lazy load
