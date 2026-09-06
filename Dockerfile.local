@@ -1,4 +1,17 @@
-# Dockerfile for local development and testing with embedded SQLite (local.db)
+# syntax=docker/dockerfile:1
+# Dockerfile for local development and testing with embedded SQLite (local.db).
+#
+# Indexing still embeds through Workers AI, so a build needs those credentials
+# even though the database is a local file:
+#   docker build -f Dockerfile.local \
+#     --secret id=cloudflare_account_id,env=CLOUDFLARE_ACCOUNT_ID \
+#     --secret id=cloudflare_api_token,env=CLOUDFLARE_API_TOKEN \
+#     -t semantic-docs-local .
+#
+# Serving search needs them again at runtime:
+#   docker run -p 4321:4321 \
+#     -e CLOUDFLARE_ACCOUNT_ID -e CLOUDFLARE_API_TOKEN \
+#     semantic-docs-local
 
 # Build stage
 FROM node:22-slim AS builder
@@ -10,16 +23,22 @@ RUN corepack enable && corepack prepare pnpm@11.23.0 --activate
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install dependencies
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # Copy source files
 COPY . .
 
-# Initialize database and index content for build
-RUN pnpm db:init:local && pnpm index:local
+# Initialize local.db and index content into it. No Turso credentials, so both
+# scripts fall back to file:local.db; the Workers AI ones are still required
+# because indexing embeds every chunk.
+RUN --mount=type=secret,id=cloudflare_account_id,required=true \
+    --mount=type=secret,id=cloudflare_api_token,required=true \
+    export CLOUDFLARE_ACCOUNT_ID="$(cat /run/secrets/cloudflare_account_id)" && \
+    export CLOUDFLARE_API_TOKEN="$(cat /run/secrets/cloudflare_api_token)" && \
+    pnpm db:init:local && pnpm index:local
 
 # Build application
 RUN pnpm build
@@ -34,12 +53,12 @@ RUN corepack enable && corepack prepare pnpm@11.23.0 --activate
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install production dependencies only
-RUN pnpm install --prod --no-frozen-lockfile
+RUN pnpm install --prod --frozen-lockfile
 
-# Copy built application and local.db
+# Copy built application and the indexed database
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/local.db ./local.db
 
@@ -60,9 +79,12 @@ EXPOSE 4321
 ENV HOST=0.0.0.0
 ENV PORT=4321
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:4321/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+# Health check. Hits the search-readiness endpoint rather than `/`, which is
+# prerendered and would report healthy on a container that cannot search.
+# 127.0.0.1 rather than localhost: the server binds IPv4 only, and localhost
+# can resolve to ::1 first.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD node -e "require('http').get('http://127.0.0.1:4321/api/health.json',(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
 # Start the server
 CMD ["node", "./dist/server/entry.mjs"]

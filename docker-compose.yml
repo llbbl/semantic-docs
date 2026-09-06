@@ -3,14 +3,27 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.local
+      secrets:
+        - cloudflare_account_id
+        - cloudflare_api_token
     ports:
       - "4321:4321"
     environment:
       - HOST=0.0.0.0
       - PORT=4321
+      # Serving a search embeds the query through Workers AI, so the container
+      # needs these at runtime as well as at build time.
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:?set CLOUDFLARE_ACCOUNT_ID in your environment or .env}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:?set CLOUDFLARE_API_TOKEN in your environment or .env}
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4321/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:4321/api/health.json',(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
       interval: 30s
-      timeout: 3s
+      timeout: 5s
       retries: 3
-      start_period: 5s
+      start_period: 15s
+
+secrets:
+  cloudflare_account_id:
+    environment: CLOUDFLARE_ACCOUNT_ID
+  cloudflare_api_token:
+    environment: CLOUDFLARE_API_TOKEN
