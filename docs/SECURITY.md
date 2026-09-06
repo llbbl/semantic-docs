@@ -106,9 +106,27 @@ The API limits:
 
 ### Environment-Specific Risks
 
-**Local embedding provider** (Free)
-- Risk: CPU abuse
-- Mitigation: Rate limiting sufficient
+**Cloudflare Workers AI embedding provider**
+- Risk: Quota and cost. Every search and every indexed document is a billable
+  Workers AI call against a shared account-wide allowance. The in-memory rate
+  limit is per-IP and per-instance, so it caps neither a distributed source nor
+  total account spend.
+- Risk: Data egress. Indexed content and raw search queries are sent to
+  Cloudflare. Do not index material you cannot share with a third party.
+- Risk: Availability coupling. There is no in-process fallback; a Workers AI
+  outage takes search down.
+- Mitigation: Rate limiting bounds a single client only. Set a Workers AI usage
+  cap in the Cloudflare dashboard for a real spend ceiling.
+
+### Credential Handling
+
+`CLOUDFLARE_API_TOKEN` is the only secret this project sends to a third party.
+
+- Scope it to the `Workers AI: Read` permission and nothing more
+- Keep it in `.env` (gitignored) or the deployment platform's secret store
+- Rotate it if it is ever printed, committed, or shared
+- The token is never returned to clients: credential errors surface as a
+  generic 500, and libsql-search redacts the token from its own error paths
 
 ### Turso Database Limits
 

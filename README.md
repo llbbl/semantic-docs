@@ -32,10 +32,14 @@ pnpm dev
 
 Open `http://localhost:4321`.
 
-The local path works without Turso credentials. The current repo defaults to the
-`articles_local_384` index with libsql-search configured as `provider: 'local'`
-at 384 dimensions. When you want a remote libSQL/Turso database, switch to the
-`.env`-driven commands in the docs.
+The local path works without Turso credentials, but indexing and search both
+call Cloudflare Workers AI, so `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`
+must be set before `pnpm index:local`. Copy `.env.example` to `.env` to fill them
+in. The current repo defaults to the `articles_cf_bgem3_1024` index at 1024
+dimensions, the fixed width of `@cf/baai/bge-m3`. When you want a remote
+libSQL/Turso database, switch to the `.env`-driven commands in the docs.
+
+Text you index and every search query are sent to Cloudflare.
 
 ## Documentation
 

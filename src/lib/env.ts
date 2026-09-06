@@ -85,6 +85,16 @@ export const env = {
     return Boolean(this.tursoDbUrl && this.tursoAuthToken);
   },
 
+  /**
+   * Whether Workers AI credentials are configured. Deliberately does not expose
+   * the token itself, so no getter on this shared object can serialize it.
+   */
+  get hasCloudflareCredentials(): boolean {
+    return Boolean(
+      getEnv('CLOUDFLARE_ACCOUNT_ID') && getEnv('CLOUDFLARE_API_TOKEN'),
+    );
+  },
+
   /** Proxy header explicitly trusted for rate-limit client identity */
   get rateLimitTrustedProxyHeader(): RateLimitTrustedProxyHeader | undefined {
     const value = getEnv('RATE_LIMIT_TRUSTED_PROXY_HEADER');
