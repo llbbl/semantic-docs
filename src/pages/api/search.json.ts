@@ -7,6 +7,8 @@ import { search } from '@logan/libsql-search';
 import type { APIRoute } from 'astro';
 import { logger } from 'logan-logger';
 import { env } from '@/lib/env';
+import { buildExcerpt } from '@/lib/excerpt';
+import { createSearchCache, searchCacheKey } from '@/lib/searchCache';
 import {
   getEmbeddingOptions,
   SEARCH_EMBEDDING_TIMEOUT_MS,
@@ -17,6 +19,31 @@ import { isValidSearchQuery } from '@/lib/validation';
 import { checkRateLimit, createRateLimitHeaders } from '@/middleware/rateLimit';
 
 export const prerender = false;
+
+/**
+ * Result shape sent to the client. The library's SearchResult carries the full
+ * article body, which the UI never renders; shipping ten of those per debounced
+ * keystroke is the payload this replaces.
+ */
+export interface SearchResultPayload {
+  id: number;
+  slug: string;
+  title: string;
+  folder: string;
+  tags: string[];
+  distance: number;
+  excerpt: string;
+}
+
+/**
+ * Process-wide cache of trimmed results. Caching after the trim keeps article
+ * bodies out of memory, and the lookup happens before the Workers AI call so a
+ * hit skips the billed request entirely.
+ */
+export const searchCache = createSearchCache<SearchResultPayload[]>({
+  ttlMs: env.searchCacheTtlMs,
+  maxEntries: env.searchCacheMaxEntries,
+});
 
 /**
  * Environment configuration for validateOrigin
@@ -219,10 +246,24 @@ export const POST: APIRoute = async ({ request, site, clientAddress }) => {
     }
     const sanitizedLimit = Math.min(Math.max(1, numericLimit), 20);
 
+    const cacheKey = searchCacheKey(normalizedQuery, sanitizedLimit);
+    const cached = searchCache.get(cacheKey);
+
+    if (cached) {
+      return new Response(
+        JSON.stringify({
+          results: cached,
+          count: cached.length,
+          query: normalizedQuery,
+        }),
+        { status: 200, headers: rateLimitHeaders },
+      );
+    }
+
     const client = getTursoClient();
 
     // Perform vector search using centralized env config
-    const results = await search({
+    const matches = await search({
       client,
       query: normalizedQuery,
       limit: sanitizedLimit,
@@ -233,6 +274,18 @@ export const POST: APIRoute = async ({ request, site, clientAddress }) => {
         signal: request.signal,
       }),
     });
+
+    const results: SearchResultPayload[] = matches.map((match) => ({
+      id: match.id,
+      slug: match.slug,
+      title: match.title,
+      folder: match.folder,
+      tags: match.tags,
+      distance: match.distance,
+      excerpt: buildExcerpt(match.content, normalizedQuery),
+    }));
+
+    searchCache.set(cacheKey, results);
 
     return new Response(
       JSON.stringify({

@@ -21,6 +21,7 @@ interface SearchResult {
   folder: string;
   tags: string[];
   distance: number;
+  excerpt: string;
 }
 
 export interface SearchProps {
@@ -265,6 +266,11 @@ export default function Search({
                         <div className="font-medium text-sm">
                           {result.title}
                         </div>
+                        {result.excerpt && (
+                          <div className="text-xs text-muted-foreground line-clamp-2 text-left">
+                            {result.excerpt}
+                          </div>
+                        )}
                         {result.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1">
                             {result.tags.map((tag) => (
