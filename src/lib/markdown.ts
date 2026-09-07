@@ -1,5 +1,6 @@
-import { marked as markedBase } from 'marked';
+import { Marked } from 'marked';
 import sanitizeHtml from 'sanitize-html';
+import { slugify } from './utils';
 
 // Allowlist of URL schemes considered safe to emit in href/src attributes.
 // Defense-in-depth: sanitize-html also enforces this on the post-render pass,
@@ -9,7 +10,10 @@ import sanitizeHtml from 'sanitize-html';
 const SAFE_LINK_SCHEMES = ['http:', 'https:', 'mailto:', 'tel:'];
 const SAFE_IMAGE_SCHEMES = ['http:', 'https:', 'data:'];
 
-function isSafeUrl(href: string | undefined, schemes: string[]): boolean {
+function isSafeUrl(
+  href: string | undefined,
+  schemes: string[],
+): href is string {
   if (!href) return false;
   // Browsers tolerate leading whitespace in href/src, so the scheme check
   // must run against the trimmed value too — otherwise `"  javascript:..."`
@@ -33,37 +37,54 @@ function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (char) => htmlEscapes[char]);
 }
 
-markedBase.use({
-  renderer: {
-    heading({ tokens, depth }) {
-      const text = this.parser.parseInline(tokens);
-      const id = text
-        .toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^\w-]/g, '');
-      return `<h${depth} id="${id}">${text}</h${depth}>`;
+/**
+ * Builds a parser for a single document. The instance is per-call because the
+ * heading slugger carries state, and sharing it across documents would number
+ * a heading based on what some earlier page happened to contain.
+ */
+function createParser(): Marked {
+  const usedIds = new Set<string>();
+
+  return new Marked({
+    renderer: {
+      heading({ tokens, depth }) {
+        // Slug the plain text, not the rendered inline HTML: otherwise a
+        // heading containing code or a link folds tag names into its id
+        // (`## Run \`pnpm index\`` became `run-codepnpm-indexcode`).
+        const plain = this.parser.parseInline(tokens, this.parser.textRenderer);
+        // A heading of only punctuation or emoji slugs to nothing; it still
+        // needs an id for the table of contents to link it.
+        const base = slugify(plain) || 'section';
+        let id = base;
+        for (let n = 1; usedIds.has(id); n++) {
+          id = `${base}-${n}`;
+        }
+        usedIds.add(id);
+        const text = this.parser.parseInline(tokens);
+        return `<h${depth} id="${id}">${text}</h${depth}>`;
+      },
+      link({ href, title, tokens }) {
+        const text = this.parser.parseInline(tokens);
+        const safeHref = isSafeUrl(href, SAFE_LINK_SCHEMES) ? href : '';
+        const escapedHref = escapeHtml(safeHref);
+        const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
+        if (safeHref.startsWith('http://') || safeHref.startsWith('https://')) {
+          return `<a href="${escapedHref}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
+        }
+        return `<a href="${escapedHref}"${titleAttr}>${text}</a>`;
+      },
+      image({ href, title, text }) {
+        const escapedAlt = escapeHtml(text || 'Image');
+        const safeHref = isSafeUrl(href, SAFE_IMAGE_SCHEMES) ? href : '';
+        const escapedHref = escapeHtml(safeHref);
+        const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
+        // Add decoding="async" for non-blocking decode, loading="lazy" for lazy load
+        // Width/height omitted as markdown doesn't provide dimensions - use CSS for sizing
+        return `<img src="${escapedHref}" alt="${escapedAlt}"${titleAttr} loading="lazy" decoding="async" />`;
+      },
     },
-    link({ href, title, tokens }) {
-      const text = this.parser.parseInline(tokens);
-      const safeHref = isSafeUrl(href, SAFE_LINK_SCHEMES) ? href || '' : '';
-      const escapedHref = escapeHtml(safeHref);
-      const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
-      if (safeHref.startsWith('http://') || safeHref.startsWith('https://')) {
-        return `<a href="${escapedHref}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
-      }
-      return `<a href="${escapedHref}"${titleAttr}>${text}</a>`;
-    },
-    image({ href, title, text }) {
-      const escapedAlt = escapeHtml(text || 'Image');
-      const safeHref = isSafeUrl(href, SAFE_IMAGE_SCHEMES) ? href || '' : '';
-      const escapedHref = escapeHtml(safeHref);
-      const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
-      // Add decoding="async" for non-blocking decode, loading="lazy" for lazy load
-      // Width/height omitted as markdown doesn't provide dimensions - use CSS for sizing
-      return `<img src="${escapedHref}" alt="${escapedAlt}"${titleAttr} loading="lazy" decoding="async" />`;
-    },
-  },
-});
+  });
+}
 
 /**
  * Sanitization configuration for markdown HTML output
@@ -127,7 +148,7 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
  * Wraps marked output to ensure XSS protection
  */
 async function marked(content: string): Promise<string> {
-  const html = await markedBase(content);
+  const html = await createParser().parse(content);
   return sanitizeHtml(html, sanitizeOptions);
 }
 

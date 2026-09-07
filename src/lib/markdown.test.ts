@@ -26,6 +26,47 @@ describe('marked', () => {
       const result = await marked('## Hello, World! (Test)');
       expect(result).toContain('id="hello-world-test"');
     });
+
+    it('should slug the plain text of a heading, not its rendered HTML', async () => {
+      const result = await marked('## Run `pnpm index`');
+      expect(result).toContain('id="run-pnpm-index"');
+    });
+
+    it('should ignore link markup when building a heading ID', async () => {
+      const result = await marked('## See [the docs](https://example.com)');
+      expect(result).toContain('id="see-the-docs"');
+    });
+
+    it('should ignore emphasis markup when building a heading ID', async () => {
+      const result = await marked('## **Bold** and _italic_');
+      expect(result).toContain('id="bold-and-italic"');
+    });
+
+    it('should suffix duplicate headings instead of colliding', async () => {
+      const result = await marked('## Example\n\n## Example\n\n## Example');
+      expect(result).toContain('id="example"');
+      expect(result).toContain('id="example-1"');
+      expect(result).toContain('id="example-2"');
+    });
+
+    it('should not collide when a suffixed ID matches a later heading', async () => {
+      const result = await marked('## Example\n\n## Example\n\n## Example 1');
+      const ids = [...result.matchAll(/id="([^"]*)"/g)].map((m) => m[1]);
+      expect(ids).toEqual(['example', 'example-1', 'example-1-1']);
+    });
+
+    it('should de-duplicate per document rather than across calls', async () => {
+      const first = await marked('## Example');
+      const second = await marked('## Example');
+      expect(first).toContain('id="example"');
+      expect(second).toContain('id="example"');
+    });
+
+    it('should fall back to a usable ID when a heading slugs to nothing', async () => {
+      const result = await marked('## 🎉\n\n## ---');
+      expect(result).toContain('id="section"');
+      expect(result).toContain('id="section-1"');
+    });
   });
 
   describe('external links', () => {
@@ -51,6 +92,12 @@ describe('marked', () => {
       const result = await marked('[Example](https://example.com "Title")');
       expect(result).toContain('title="Title"');
     });
+
+    it('should drop the href of a link with an empty target', async () => {
+      const result = await marked('[Example]()');
+      expect(result).toContain('<a>Example</a>');
+      expect(result).not.toContain('href');
+    });
   });
 
   describe('images', () => {
@@ -67,6 +114,17 @@ describe('marked', () => {
     it('should handle image titles', async () => {
       const result = await marked('![Alt](image.jpg "Image title")');
       expect(result).toContain('title="Image title"');
+    });
+
+    it('should fall back to a default alt when the image has none', async () => {
+      const result = await marked('![](https://example.com/a.png)');
+      expect(result).toContain('alt="Image"');
+    });
+
+    it('should drop the src of an image with an empty target', async () => {
+      const result = await marked('![Alt]()');
+      expect(result).toContain('<img alt="Alt"');
+      expect(result).not.toContain('src=');
     });
   });
 
