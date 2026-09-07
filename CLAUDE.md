@@ -232,6 +232,16 @@ chore: bump dependencies
 ```
 
 ### Release Process
-1. Make commits following the convention above
-2. Create and push a version tag: `git tag v1.2.3 && git push --tags`
-3. GitHub Actions will automatically generate changelog and create release
+
+Pushing to `main` cuts a release automatically — do not tag by hand. The
+workflow reads conventional commit subjects since the last tag, bumps the
+version, commits the bump, tags it, and publishes a GitHub release.
+
+**This project does not follow strict semver.** `feat:` bumps the minor,
+everything else bumps the patch, and a breaking-change marker (`feat!:`,
+`fix!:`, `refactor!:`, `BREAKING CHANGE`) also bumps only the **minor** — it
+logs a warning rather than cutting a major. Majors are cut deliberately by
+running the Auto Release workflow manually with `allow_major` enabled.
+
+This means the squash-merge subject decides the release. Choose it carefully:
+it is the version bump. See `docs/REFERENCE.md` for the full table.

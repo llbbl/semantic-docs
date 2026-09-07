@@ -58,3 +58,27 @@ pnpm test
 ```
 
 Releases are driven from conventional commits on `main` via GitHub Actions.
+
+## Versioning
+
+**This project does not follow strict semver.** Breaking changes ship in minor
+releases. The version number tracks release cadence, not compatibility
+guarantees — read the changelog, not the version, before upgrading.
+
+Releases are cut automatically from conventional commit subjects on `main`:
+
+| Commit subject since the last tag | Bump |
+| --- | --- |
+| `feat:` / `feat(scope):` | minor |
+| anything else | patch |
+| `feat!:`, `fix!:`, `refactor!:`, `BREAKING CHANGE` | minor, with a warning |
+
+A breaking-change marker does **not** produce a major on its own. Majors are
+deliberate: run the Auto Release workflow manually from the Actions tab with
+`allow_major` enabled. When a marker is found and suppressed, the run logs a
+warning naming the version it shipped instead.
+
+The decision lives in [`scripts/next-version.sh`](../scripts/next-version.sh)
+rather than inline in the workflow, so it can be tested without cutting a
+release. Only commit *subjects* are inspected — a `BREAKING CHANGE` footer in a
+commit body has never been detected.

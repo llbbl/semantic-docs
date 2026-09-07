@@ -3,6 +3,12 @@ name: Auto Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      allow_major:
+        description: 'Cut a major release. Leave off unless a major is deliberately intended.'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -35,30 +41,30 @@ jobs:
 
       - name: Determine next version
         id: version
+        env:
+          ALLOW_MAJOR: ${{ inputs.allow_major || false }}
         run: |
           latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           echo "latest=$latest_tag" >> "$GITHUB_OUTPUT"
 
-          version="${latest_tag#v}"
-          IFS='.' read -r major minor patch <<< "$version"
-
           commits=$(git log "$latest_tag"..HEAD --pretty=format:"%s" 2>/dev/null || git log --pretty=format:"%s")
 
-          if echo "$commits" | grep -qE "^feat(\(.+\))?!:|^fix(\(.+\))?!:|^refactor(\(.+\))?!:|BREAKING CHANGE"; then
-            major=$((major + 1))
-            minor=0
-            patch=0
-          elif echo "$commits" | grep -qE "^feat(\(.+\))?:"; then
-            minor=$((minor + 1))
-            patch=0
-          else
-            patch=$((patch + 1))
+          printf '%s\n' "$commits" \
+            | ./scripts/next-version.sh "$latest_tag" "$ALLOW_MAJOR" > version.out
+          cat version.out >> "$GITHUB_OUTPUT"
+
+          version=$(grep '^version=' version.out | cut -d= -f2)
+          bump=$(grep '^bump=' version.out | cut -d= -f2)
+          suppressed=$(grep '^suppressed_major=' version.out | cut -d= -f2)
+          rm -f version.out
+
+          echo "next=v$version" >> "$GITHUB_OUTPUT"
+
+          if [ "$suppressed" = "true" ]; then
+            echo "::warning::A breaking-change marker was found in the commits since $latest_tag, but automatic major bumps are disabled. Releasing v$version as a $bump instead. To cut a major, run this workflow manually with allow_major enabled."
           fi
 
-          next="v${major}.${minor}.${patch}"
-          echo "next=$next" >> "$GITHUB_OUTPUT"
-          echo "version=${major}.${minor}.${patch}" >> "$GITHUB_OUTPUT"
-          echo "Next version: $next (from $latest_tag)"
+          echo "Next version: v$version ($bump, from $latest_tag)"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
