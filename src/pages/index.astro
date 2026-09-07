@@ -4,6 +4,7 @@ export const prerender = true;
 import DocsHeader from '@/components/DocsHeader.astro';
 import DocsSidebar from '@/components/DocsSidebar.astro';
 import DocsTocWithErrorBoundary from '@/components/DocsTocWithErrorBoundary.tsx';
+import { site } from '@/config/site';
 import DocsLayout from '@/layouts/DocsLayout.astro';
 ---
 
@@ -18,10 +19,10 @@ import DocsLayout from '@/layouts/DocsLayout.astro';
         <article class="prose prose-neutral dark:prose-invert max-w-none">
           <div class="mb-8">
             <h1 id="welcome" class="text-4xl font-bold tracking-tight text-balance mb-4">
-              Welcome to Your Documentation
+              Welcome to {site.name}
             </h1>
             <p class="text-lg text-muted-foreground leading-relaxed">
-              Your content is powered by libSQL with vector search capabilities.
+              {site.tagline}
             </p>
           </div>
 
