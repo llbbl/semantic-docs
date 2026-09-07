@@ -51,7 +51,8 @@ local.db-wal
 .gemini
 .agent
 
-# LLM symlinks (point to CLAUDE.md)
+# Agent instructions, local-only (AGENTS.md and GEMINI.md symlink to CLAUDE.md)
+CLAUDE.md
 AGENTS.md
 GEMINI.md
 
