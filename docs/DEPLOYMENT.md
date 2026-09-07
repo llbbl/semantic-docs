@@ -47,6 +47,15 @@ TURSO_AUTH_TOKEN=your-auth-token
 
 Without those values, the project falls back to `file:local.db`.
 
+Set the public origin so canonical and Open Graph URLs are correct:
+
+```env
+SITE_URL=https://docs.your-domain.com
+```
+
+It defaults to `http://localhost:4321` and warns at build time when unset. See
+[Customize](./GETTING_STARTED.md#customize) for the rest of the site identity.
+
 Embeddings additionally require Workers AI credentials in every environment that
 indexes or serves search:
 

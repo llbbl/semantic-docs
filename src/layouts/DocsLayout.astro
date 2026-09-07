@@ -4,6 +4,7 @@
  * Based on modern docs UI with header, sidebar, content, and TOC
  */
 import '../styles/global.css';
+import { site } from '@/config/site';
 import { defaultTheme, foucThemes } from '@/config/themes';
 
 interface Props {
@@ -13,17 +14,16 @@ interface Props {
 }
 
 const {
-  title = 'Astro Vault',
-  description = 'Documentation',
+  title = site.name,
+  description = site.defaultDescription,
   image,
 } = Astro.props;
 
-// Generate canonical and Open Graph URLs
-// Note: Configure 'site' in astro.config.mjs for production deployments
-const siteUrl = Astro.site || 'https://example.com';
+// Astro.site comes from `site` in astro.config.mjs, which reads the same
+// config value; the fallback only matters if that is ever unset.
+const siteUrl = Astro.site || site.siteUrl;
 const canonicalURL = new URL(Astro.url.pathname, siteUrl);
 const ogImage = image ? new URL(image, siteUrl).href : undefined;
-
 // Generate FOUC prevention script from themes.ts
 const foucScript = `(function(){var t=localStorage.getItem('theme')||'${defaultTheme}',c=${JSON.stringify(foucThemes)}[t];if(c){var d=document.documentElement.style;d.setProperty('--background',c.background);d.setProperty('--foreground',c.foreground);d.setProperty('--header',c.header);d.setProperty('--sidebar',c.sidebar);d.setProperty('--toc',c.toc)}})();`;
 ---

@@ -6,7 +6,7 @@ the README too heavy.
 
 ## Start Here
 
-- [Getting started](./GETTING_STARTED.md) for install, local development, Turso setup, and reindexing
+- [Getting started](./GETTING_STARTED.md) for install, local development, Turso setup, rebranding, and reindexing
 - [Deployment](./DEPLOYMENT.md) for build requirements, environment variables, and upgrade notes
 - [Reference](./REFERENCE.md) for project structure, search defaults, and quality commands
 - [Security](./SECURITY.md) for rate limiting and operational hardening notes

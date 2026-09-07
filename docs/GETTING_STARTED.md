@@ -83,6 +83,42 @@ Or, for the local database flow:
 pnpm index:local
 ```
 
+## Customize
+
+All site identity lives in one file, [`src/config/site.ts`](../src/config/site.ts):
+
+```ts
+export const site = {
+  name: 'Astro Vault',
+  tagline: 'Your content is powered by libSQL with vector search capabilities.',
+  logo: 'A',
+  repoUrl: 'https://github.com/llbbl/semantic-docs',
+  defaultDescription: 'Documentation',
+  social: [],
+  siteUrl,
+};
+```
+
+The header, the layout's `<title>` and meta description, and the landing page
+all read from it, so rebranding is a single edit. Setting `repoUrl` to `''`
+hides the header's repository icon, and entries added to `social` render as
+extra header links.
+
+### Canonical URL
+
+`siteUrl` sets `site` in `astro.config.mjs`, which is what Astro uses for every
+page's `<link rel="canonical">`, `og:url`, and `twitter:url`. Set it per
+environment:
+
+```bash
+SITE_URL=https://docs.your-domain.com pnpm build
+```
+
+If `SITE_URL` is unset the build falls back to `http://localhost:4321` and
+prints a warning. That fallback is deliberately a local address rather than a
+real-looking domain — an unconfigured origin should be obvious in the emitted
+markup instead of quietly pointing every canonical tag somewhere you do not own.
+
 ## Search Configuration
 
 The current repo configuration stores vectors in `articles_cf_bgem3_1024` and uses:
