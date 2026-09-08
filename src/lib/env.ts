@@ -51,6 +51,14 @@ export function getRequiredEnv(key: string): string {
 
 export type RateLimitTrustedProxyHeader = 'x-real-ip' | 'x-forwarded-for';
 
+function getNonNegativeInteger(key: string, defaultValue: number): number {
+  const value = getEnv(key);
+  if (value === undefined) return defaultValue;
+
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : defaultValue;
+}
+
 function getPositiveInteger(key: string, defaultValue: number): number {
   const value = getEnv(key);
   if (value === undefined) return defaultValue;
@@ -111,6 +119,16 @@ export const env = {
   /** Maximum in-memory rate-limit buckets retained per process */
   get rateLimitMaxEntries(): number {
     return getPositiveInteger('RATE_LIMIT_MAX_ENTRIES', 10_000);
+  },
+
+  /** Search result cache lifetime. Zero disables the cache. */
+  get searchCacheTtlMs(): number {
+    return getNonNegativeInteger('SEARCH_CACHE_TTL_SECONDS', 300) * 1000;
+  },
+
+  /** Maximum cached search responses retained per process */
+  get searchCacheMaxEntries(): number {
+    return getPositiveInteger('SEARCH_CACHE_MAX_ENTRIES', 500);
   },
 
   /**

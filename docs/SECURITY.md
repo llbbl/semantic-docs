@@ -104,6 +104,13 @@ The API limits:
 - Results count (max 20) - prevents excessive database queries
 - Request rate (20/min) - prevents API/database abuse
 
+A per-process result cache sits in front of the embedding call, so repeated
+queries cost nothing upstream. It is keyed by normalized query and limit, holds
+500 entries for 5 minutes by default, and is tuned with
+`SEARCH_CACHE_TTL_SECONDS` and `SEARCH_CACHE_MAX_ENTRIES`. Setting the TTL to 0
+disables it. The cache is per instance, so it reduces call volume rather than
+bounding it; it is not a substitute for a spend cap.
+
 ### Environment-Specific Risks
 
 **Cloudflare Workers AI embedding provider**
@@ -115,8 +122,12 @@ The API limits:
   Cloudflare. Do not index material you cannot share with a third party.
 - Risk: Availability coupling. There is no in-process fallback; a Workers AI
   outage takes search down.
-- Mitigation: Rate limiting bounds a single client only. Set a Workers AI usage
-  cap in the Cloudflare dashboard for a real spend ceiling.
+- Mitigation: Rate limiting bounds a single client only, and the result cache
+  collapses repeated queries. Neither bounds total spend. Set a Workers AI usage
+  cap in the Cloudflare dashboard for a real ceiling.
+- Note: While a query is cached, results are served without contacting
+  Cloudflare, so broken or revoked credentials surface only once the entry
+  expires rather than on the next request.
 
 ### Credential Handling
 

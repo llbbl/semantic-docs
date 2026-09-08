@@ -1,7 +1,7 @@
 import type { SearchResult } from '@logan/libsql-search';
 import type { APIContext } from 'astro';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { GET, POST } from './search.json';
+import { GET, POST, searchCache } from './search.json';
 
 // Mock dependencies
 vi.mock('@logan/libsql-search', () => ({
@@ -26,6 +26,9 @@ function createMockContext(
 describe('Search API Route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The result cache is process-wide, so a hit in one test would otherwise
+    // satisfy the next one without ever reaching the mocked search.
+    searchCache.clear();
     // Every search path resolves Workers AI credentials before querying.
     vi.stubEnv('CLOUDFLARE_ACCOUNT_ID', 'test-account-id');
     vi.stubEnv('CLOUDFLARE_API_TOKEN', 'test-api-token');
@@ -62,9 +65,146 @@ describe('Search API Route', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.results).toEqual(mockResults);
+      expect(data.results).toEqual([
+        {
+          id: 1,
+          title: 'Test Article',
+          slug: 'test',
+          folder: 'docs',
+          tags: ['test'],
+          distance: 0.5,
+          excerpt: 'Test content',
+        },
+      ]);
       expect(data.count).toBe(1);
       expect(data.query).toBe('test query');
+    });
+
+    it('should not ship article content to the client', async () => {
+      vi.mocked(search).mockResolvedValueOnce([
+        {
+          id: 1,
+          title: 'Test Article',
+          slug: 'test',
+          folder: 'docs',
+          tags: ['test'],
+          distance: 0.5,
+          content: 'A'.repeat(50_000),
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ]);
+
+      const response = await POST(
+        createMockContext(
+          new Request('http://localhost/api/search.json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: 'payload check' }),
+          }),
+          '192.0.2.14',
+        ),
+      );
+      const body = await response.text();
+
+      expect(body).not.toContain('A'.repeat(1000));
+      expect(JSON.parse(body).results[0]).not.toHaveProperty('content');
+    });
+
+    it('should serve a repeated query from cache without re-embedding', async () => {
+      vi.mocked(search).mockResolvedValue([]);
+
+      const send = () =>
+        POST(
+          createMockContext(
+            new Request('http://localhost/api/search.json', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: 'cached query', limit: 5 }),
+            }),
+            '192.0.2.10',
+          ),
+        );
+
+      const first = await send();
+      const second = await send();
+
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+      expect(await second.json()).toEqual(await first.json());
+      // The billed embedding call happens inside search(); one call for two
+      // requests is the whole point of the cache.
+      expect(search).toHaveBeenCalledTimes(1);
+    });
+
+    it('should treat a different limit as a separate cache entry', async () => {
+      vi.mocked(search).mockResolvedValue([]);
+
+      const send = (limit: number) =>
+        POST(
+          createMockContext(
+            new Request('http://localhost/api/search.json', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: 'same query', limit }),
+            }),
+            '192.0.2.11',
+          ),
+        );
+
+      await send(5);
+      await send(10);
+
+      expect(search).toHaveBeenCalledTimes(2);
+    });
+
+    it('should share a cache entry across query casing and padding', async () => {
+      vi.mocked(search).mockResolvedValue([]);
+
+      const send = (query: string) =>
+        POST(
+          createMockContext(
+            new Request('http://localhost/api/search.json', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query, limit: 5 }),
+            }),
+            '192.0.2.12',
+          ),
+        );
+
+      await send('Deploy');
+      await send('  deploy  ');
+
+      expect(search).toHaveBeenCalledTimes(1);
+    });
+
+    it('should build the excerpt around the query term', async () => {
+      vi.mocked(search).mockResolvedValueOnce([
+        {
+          id: 1,
+          title: 'Deployment',
+          slug: 'deploy',
+          folder: 'docs',
+          tags: [],
+          distance: 0.1,
+          content: `${'Filler prose about nothing. '.repeat(20)}The TURSO_DB_URL setting names the database. ${'Trailing filler. '.repeat(20)}`,
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ]);
+
+      const response = await POST(
+        createMockContext(
+          new Request('http://localhost/api/search.json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: 'TURSO_DB_URL' }),
+          }),
+          '192.0.2.13',
+        ),
+      );
+      const data = await response.json();
+
+      expect(data.results[0].excerpt).toContain('TURSO_DB_URL');
     });
 
     it('should return 400 for missing query', async () => {
@@ -286,7 +426,10 @@ describe('Search API Route', () => {
             'Content-Type': 'application/json',
             'x-forwarded-for': `203.0.113.${index + 1}`,
           },
-          body: JSON.stringify({ query: 'test query' }),
+          // Unique per iteration: identical queries would be served from the
+          // result cache and never reach the mocked search, which is what this
+          // test counts to prove the limiter let them through.
+          body: JSON.stringify({ query: `test query ${index}` }),
         });
 
         response = await POST(createMockContext(request, '198.51.100.100'));
@@ -308,7 +451,9 @@ describe('Search API Route', () => {
             'Content-Type': 'application/json',
             'x-real-ip': '203.0.113.200',
           },
-          body: JSON.stringify({ query: 'test query' }),
+          // Unique per iteration so the result cache does not absorb requests
+          // this test counts to prove the limiter let them through.
+          body: JSON.stringify({ query: `test query ${index}` }),
         });
 
         response = await POST(

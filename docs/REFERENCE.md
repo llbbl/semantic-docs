@@ -37,8 +37,15 @@ semantic-docs/
 - vector width: `1024` (fixed by `@cf/baai/bge-m3`)
 - provider: `cloudflare` (Workers AI; requires `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`)
 - local development database: `file:local.db` when Turso credentials are absent
+- result cache: 500 entries, 5 minute TTL, per process
+  (`SEARCH_CACHE_TTL_SECONDS`, `SEARCH_CACHE_MAX_ENTRIES`; `0` disables)
 
 Those values are defined in [searchConfig.ts](../src/lib/searchConfig.ts).
+
+`/api/search.json` returns `id, slug, title, folder, tags, distance, excerpt`.
+The excerpt is a ~160 character plain-text window built by
+[excerpt.ts](../src/lib/excerpt.ts), centered on the first query term where the
+article contains one. Article bodies are never sent to the client.
 
 ## Current Stack
 
