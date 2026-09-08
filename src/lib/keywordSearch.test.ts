@@ -116,6 +116,20 @@ describe('keywordSearch', () => {
     expect(await keywordSearch(client, 'deploy', 10)).toEqual([]);
   });
 
+  it('should join on slug so the index survives a reindex', async () => {
+    const client = clientReturning([]);
+
+    await keywordSearch(client, 'deploy', 10);
+
+    const { sql } = vi.mocked(client.execute).mock.calls[0][0] as unknown as {
+      sql: string;
+    };
+    // Article ids are AUTOINCREMENT and change on every reindex, so a rowid
+    // join would silently match nothing after the next `pnpm index`.
+    expect(sql).toContain('a.slug = m.matched_slug');
+    expect(sql).not.toContain('a.id = m.rid');
+  });
+
   it('should pass the match expression and limit as bound arguments', async () => {
     const client = clientReturning([]);
 

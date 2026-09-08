@@ -48,12 +48,19 @@ const embeddingOptions = getEmbeddingOptions();
  */
 async function rebuildKeywordIndex(): Promise<void> {
   await client.execute(
-    `CREATE VIRTUAL TABLE IF NOT EXISTS "${SEARCH_FTS_TABLE_NAME}" USING fts5(title, content, tags)`,
+    `CREATE VIRTUAL TABLE IF NOT EXISTS "${SEARCH_FTS_TABLE_NAME}" USING fts5(slug UNINDEXED, title, content, tags)`,
   );
-  await client.execute(`DELETE FROM "${SEARCH_FTS_TABLE_NAME}"`);
-  await client.execute(
-    `INSERT INTO "${SEARCH_FTS_TABLE_NAME}"(rowid, title, content, tags)
-     SELECT id, title, content, tags FROM "${SEARCH_TABLE_NAME}"`,
+
+  // One transaction: a clear that commits without its refill would leave the
+  // keyword index empty, and an empty index returns rows cleanly rather than
+  // erroring, so nothing downstream would notice.
+  await client.batch(
+    [
+      `DELETE FROM "${SEARCH_FTS_TABLE_NAME}"`,
+      `INSERT INTO "${SEARCH_FTS_TABLE_NAME}"(slug, title, content, tags)
+       SELECT slug, title, content, tags FROM "${SEARCH_TABLE_NAME}"`,
+    ],
+    'write',
   );
 }
 

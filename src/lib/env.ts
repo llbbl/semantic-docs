@@ -133,7 +133,9 @@ export const env = {
 
   /** Whether keyword results are fused with vector results */
   get hybridSearchEnabled(): boolean {
-    return getEnv('SEARCH_HYBRID_ENABLED') !== 'false';
+    const value = getEnv('SEARCH_HYBRID_ENABLED')?.trim().toLowerCase();
+    // A kill switch that silently ignores FALSE or 0 is worse than none.
+    return !(value === 'false' || value === '0' || value === 'off');
   },
 
   /**

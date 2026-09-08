@@ -290,6 +290,27 @@ describe('Search API Route', () => {
       expect(data.results[0].slug).toBe('only');
     });
 
+    it('should not over-fetch candidates when hybrid search is disabled', async () => {
+      vi.stubEnv('SEARCH_HYBRID_ENABLED', 'false');
+      vi.mocked(search).mockResolvedValueOnce([]);
+
+      await POST(
+        createMockContext(
+          new Request('http://localhost/api/search.json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: 'no fusion', limit: 10 }),
+          }),
+          '192.0.2.24',
+        ),
+      );
+
+      // Nothing to fuse, so the extra rows would be fetched and discarded.
+      expect(search).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: 10 }),
+      );
+    });
+
     it('should skip keyword retrieval when hybrid search is disabled', async () => {
       vi.stubEnv('SEARCH_HYBRID_ENABLED', 'false');
       vi.mocked(search).mockResolvedValueOnce([]);

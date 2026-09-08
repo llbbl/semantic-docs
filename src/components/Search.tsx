@@ -20,7 +20,7 @@ interface SearchResult {
   slug: string;
   folder: string;
   tags: string[];
-  distance: number;
+  distance: number | null;
   excerpt: string;
 }
 

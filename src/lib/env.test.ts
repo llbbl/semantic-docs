@@ -132,3 +132,29 @@ describe('env getters', () => {
     expect(env.rateLimitMaxEntries).toBe(500);
   });
 });
+
+describe('hybridSearchEnabled', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('should default to enabled when unset', () => {
+    expect(env.hybridSearchEnabled).toBe(true);
+  });
+
+  it.each(['false', 'FALSE', 'False', '0', 'off', 'OFF', '  false  '])(
+    'should treat %s as disabled',
+    (value) => {
+      vi.stubEnv('SEARCH_HYBRID_ENABLED', value);
+      expect(env.hybridSearchEnabled).toBe(false);
+    },
+  );
+
+  it.each(['true', 'TRUE', '1', 'yes', 'anything'])(
+    'should leave %s enabled',
+    (value) => {
+      vi.stubEnv('SEARCH_HYBRID_ENABLED', value);
+      expect(env.hybridSearchEnabled).toBe(true);
+    },
+  );
+});

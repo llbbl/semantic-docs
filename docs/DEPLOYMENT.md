@@ -80,8 +80,20 @@ The legacy `articles` and `articles_local_384` tables can be retired separately
 once the new index is validated.
 
 Hybrid search adds a keyword index, `articles_cf_bgem3_1024_fts`. Run
-`pnpm db:init` to create it and `pnpm index` to populate it. Until both have
-run, search logs a warning and returns vector-only results.
+`pnpm db:init` to create it and `pnpm index` to populate it. **Both are
+required**, and only the first missing step announces itself:
+
+- Neither has run: the keyword query errors, search logs a warning and returns
+  vector-only results.
+- `db:init` ran but `index` did not: the index exists and is empty, so the query
+  succeeds with zero rows. Search silently returns vector-only results with no
+  warning, which looks like a ranking regression rather than a missed step.
+
+After upgrading, confirm the index is populated rather than assuming it:
+
+```sql
+SELECT count(*) FROM articles_cf_bgem3_1024_fts;
+```
 
 ## Containers
 

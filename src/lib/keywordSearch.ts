@@ -75,17 +75,18 @@ export async function keywordSearch(
   try {
     // The FTS5 table name cannot be aliased: MATCH and bm25() both require the
     // literal name, so the ranking runs in a subquery that the articles table
-    // is then joined onto.
+    // is then joined onto. Joined on slug rather than rowid, which does not
+    // survive a reindex.
     const result = await client.execute({
       sql: `SELECT a.id, a.slug, a.title, a.content, a.folder, a.tags
             FROM (
-              SELECT rowid AS rid, bm25("${SEARCH_FTS_TABLE_NAME}") AS score
+              SELECT slug AS matched_slug, bm25("${SEARCH_FTS_TABLE_NAME}") AS score
               FROM "${SEARCH_FTS_TABLE_NAME}"
               WHERE "${SEARCH_FTS_TABLE_NAME}" MATCH ?
               ORDER BY score
               LIMIT ?
             ) m
-            JOIN "${SEARCH_TABLE_NAME}" a ON a.id = m.rid
+            JOIN "${SEARCH_TABLE_NAME}" a ON a.slug = m.matched_slug
             ORDER BY m.score`,
       args: [match, limit],
     });

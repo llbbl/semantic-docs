@@ -61,14 +61,17 @@ Each retriever returns three times the requested limit before fusion, since
 fusion can only reorder what it is given. Exact score ties are broken in favour
 of the keyword list.
 
-The keyword index is created by `pnpm db:init` and rebuilt by `pnpm index`. If
-it is missing, search logs a warning and returns vector-only results rather than
-failing — so upgrading code before re-running `db:init` degrades rather than
-breaks.
+The keyword index is created by `pnpm db:init` and rebuilt by `pnpm index`, and
+is joined on `slug` rather than rowid because the indexer reinserts every
+article with a new id. A missing index logs a warning and yields vector-only
+results; an index that exists but was never populated returns zero rows
+silently, so verify both steps ran after an upgrade.
 
 `/api/search.json` returns `id, slug, title, folder, tags, distance, excerpt`.
-`distance` is null for a document found only by keyword, since bm25 relevance
-and vector distance are unrelated scales.
+`distance` is null for any document the keyword retriever returned, not only
+those it alone found: fusion keeps the first-seen row and keyword results merge
+first. bm25 relevance and vector distance are unrelated scales, so there is no
+single comparable score to report.
 The excerpt is a ~160 character plain-text window built by
 [excerpt.ts](../src/lib/excerpt.ts), centered on the first query term where the
 article contains one. Article bodies are never sent to the client.

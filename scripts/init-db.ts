@@ -39,8 +39,12 @@ try {
   // external-content one: the indexer clears and repopulates the articles
   // table wholesale, and a standalone index is rebuilt from it in one step
   // without depending on trigger support.
+  // slug is carried UNINDEXED and joined on instead of rowid: the indexer
+  // clears and reinserts the articles table, and with AUTOINCREMENT every row
+  // gets a new id, so rowids captured here would join to nothing after the
+  // next reindex.
   await client.execute(
-    `CREATE VIRTUAL TABLE IF NOT EXISTS "${SEARCH_FTS_TABLE_NAME}" USING fts5(title, content, tags)`,
+    `CREATE VIRTUAL TABLE IF NOT EXISTS "${SEARCH_FTS_TABLE_NAME}" USING fts5(slug UNINDEXED, title, content, tags)`,
   );
 
   logger.info(`Created ${SEARCH_FTS_TABLE_NAME} keyword index`);

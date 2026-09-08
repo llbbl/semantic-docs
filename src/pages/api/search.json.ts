@@ -34,7 +34,11 @@ export interface SearchResultPayload {
   title: string;
   folder: string;
   tags: string[];
-  /** Vector distance, or null when the document was found only by keyword. */
+  /**
+   * Vector distance, or null for any document the keyword retriever returned.
+   * Fusion keeps the first-seen row and keyword results are merged first, so a
+   * document both retrievers found still reports null.
+   */
   distance: number | null;
   excerpt: string;
 }
@@ -266,8 +270,12 @@ export const POST: APIRoute = async ({ request, site, clientAddress }) => {
 
     const client = getTursoClient();
 
-    // Over-fetch from each retriever: fusion can only reorder what it is given.
-    const candidateLimit = sanitizedLimit * FUSION_CANDIDATE_MULTIPLIER;
+    // Over-fetch only when there are two lists to fuse. With hybrid off there
+    // is nothing to reorder, and the extra rows carry full article bodies.
+    const hybrid = env.hybridSearchEnabled;
+    const candidateLimit = hybrid
+      ? sanitizedLimit * FUSION_CANDIDATE_MULTIPLIER
+      : sanitizedLimit;
 
     // Both retrievers run concurrently. The keyword half is local to the
     // database, so it adds no latency beyond the embedding round trip that
@@ -284,7 +292,7 @@ export const POST: APIRoute = async ({ request, site, clientAddress }) => {
           signal: request.signal,
         }),
       }),
-      env.hybridSearchEnabled
+      hybrid
         ? keywordSearch(client, normalizedQuery, candidateLimit)
         : Promise.resolve([]),
     ]);
@@ -302,8 +310,9 @@ export const POST: APIRoute = async ({ request, site, clientAddress }) => {
       title: match.title,
       folder: match.folder,
       tags: match.tags,
-      // Null on keyword-only hits: bm25 and vector distance are unrelated
-      // scales, and fusion ranks by position rather than by either score.
+      // Null whenever the keyword retriever supplied the row: bm25 relevance
+      // and vector distance are unrelated scales, and fusion ranks by position
+      // rather than by either score.
       distance: match.distance,
       excerpt: buildExcerpt(match.content, normalizedQuery),
     }));
