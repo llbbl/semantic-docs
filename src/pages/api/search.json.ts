@@ -3,13 +3,16 @@
  * Uses libsql-search for semantic search
  */
 
-import { search } from '@logan/libsql-search';
+import { type SearchResult, search } from '@logan/libsql-search';
 import type { APIRoute } from 'astro';
 import { logger } from 'logan-logger';
 import { env } from '@/lib/env';
 import { buildExcerpt } from '@/lib/excerpt';
+import { reciprocalRankFusion } from '@/lib/fusion';
+import { type KeywordResult, keywordSearch } from '@/lib/keywordSearch';
 import { createSearchCache, searchCacheKey } from '@/lib/searchCache';
 import {
+  FUSION_CANDIDATE_MULTIPLIER,
   getEmbeddingOptions,
   SEARCH_EMBEDDING_TIMEOUT_MS,
   SEARCH_TABLE_NAME,
@@ -31,7 +34,8 @@ export interface SearchResultPayload {
   title: string;
   folder: string;
   tags: string[];
-  distance: number;
+  /** Vector distance, or null when the document was found only by keyword. */
+  distance: number | null;
   excerpt: string;
 }
 
@@ -262,18 +266,35 @@ export const POST: APIRoute = async ({ request, site, clientAddress }) => {
 
     const client = getTursoClient();
 
-    // Perform vector search using centralized env config
-    const matches = await search({
-      client,
-      query: normalizedQuery,
-      limit: sanitizedLimit,
-      tableName: SEARCH_TABLE_NAME,
-      embeddingOptions: getEmbeddingOptions({
-        timeoutMs: SEARCH_EMBEDDING_TIMEOUT_MS,
-        // Abandon the upstream call when the client goes away.
-        signal: request.signal,
+    // Over-fetch from each retriever: fusion can only reorder what it is given.
+    const candidateLimit = sanitizedLimit * FUSION_CANDIDATE_MULTIPLIER;
+
+    // Both retrievers run concurrently. The keyword half is local to the
+    // database, so it adds no latency beyond the embedding round trip that
+    // already dominates the request.
+    const [vectorMatches, keywordMatches] = await Promise.all([
+      search({
+        client,
+        query: normalizedQuery,
+        limit: candidateLimit,
+        tableName: SEARCH_TABLE_NAME,
+        embeddingOptions: getEmbeddingOptions({
+          timeoutMs: SEARCH_EMBEDDING_TIMEOUT_MS,
+          // Abandon the upstream call when the client goes away.
+          signal: request.signal,
+        }),
       }),
-    });
+      env.hybridSearchEnabled
+        ? keywordSearch(client, normalizedQuery, candidateLimit)
+        : Promise.resolve([]),
+    ]);
+
+    // Keyword list first: where both retrievers found a document, the row that
+    // survives carries bm25's view of it, and its rank still comes from fusion.
+    const matches = reciprocalRankFusion<KeywordResult | SearchResult>(
+      [keywordMatches, vectorMatches],
+      sanitizedLimit,
+    );
 
     const results: SearchResultPayload[] = matches.map((match) => ({
       id: match.id,
@@ -281,6 +302,8 @@ export const POST: APIRoute = async ({ request, site, clientAddress }) => {
       title: match.title,
       folder: match.folder,
       tags: match.tags,
+      // Null on keyword-only hits: bm25 and vector distance are unrelated
+      // scales, and fusion ranks by position rather than by either score.
       distance: match.distance,
       excerpt: buildExcerpt(match.content, normalizedQuery),
     }));

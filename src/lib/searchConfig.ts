@@ -3,6 +3,19 @@ import { getRequiredEnv } from './env';
 
 export const SEARCH_TABLE_NAME = 'articles_cf_bgem3_1024';
 
+// FTS5 index over the same rows, joined back by rowid = articles.id.
+export const SEARCH_FTS_TABLE_NAME = `${SEARCH_TABLE_NAME}_fts`;
+
+// Each retriever returns this multiple of the requested limit before fusion.
+// Fusion can only reorder what it is given, so a keyword hit ranked 12th by
+// bm25 is invisible if only the top 10 are fetched.
+export const FUSION_CANDIDATE_MULTIPLIER = 3;
+
+// Reciprocal rank fusion constant. 60 is the value from the original paper and
+// the usual default; it damps the gap between rank 1 and rank 2 so a single
+// retriever cannot dominate the merged list.
+export const RRF_K = 60;
+
 // Fixed by @cf/baai/bge-m3, the only model Workers AI exposes through this
 // adapter. The table's F32_BLOB width must equal it exactly.
 export const EMBEDDING_DIMENSIONS = 1024;

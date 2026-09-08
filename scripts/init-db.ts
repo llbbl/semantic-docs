@@ -9,6 +9,7 @@ import { createTable } from '@logan/libsql-search';
 import { logger } from 'logan-logger';
 import {
   EMBEDDING_DIMENSIONS,
+  SEARCH_FTS_TABLE_NAME,
   SEARCH_TABLE_NAME,
 } from '../src/lib/searchConfig';
 
@@ -33,6 +34,16 @@ try {
   logger.info(
     `Created ${SEARCH_TABLE_NAME} with ${EMBEDDING_DIMENSIONS}-dimension embeddings`,
   );
+
+  // Keyword half of hybrid search. Kept as its own table rather than an
+  // external-content one: the indexer clears and repopulates the articles
+  // table wholesale, and a standalone index is rebuilt from it in one step
+  // without depending on trigger support.
+  await client.execute(
+    `CREATE VIRTUAL TABLE IF NOT EXISTS "${SEARCH_FTS_TABLE_NAME}" USING fts5(title, content, tags)`,
+  );
+
+  logger.info(`Created ${SEARCH_FTS_TABLE_NAME} keyword index`);
 
   // Verify table exists
   const result = await client.execute({

@@ -79,6 +79,10 @@ pnpm index
 The legacy `articles` and `articles_local_384` tables can be retired separately
 once the new index is validated.
 
+Hybrid search adds a keyword index, `articles_cf_bgem3_1024_fts`. Run
+`pnpm db:init` to create it and `pnpm index` to populate it. Until both have
+run, search logs a warning and returns vector-only results.
+
 ## Containers
 
 Two Dockerfiles are provided. Both index content during the build, and indexing

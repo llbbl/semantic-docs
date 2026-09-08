@@ -131,6 +131,11 @@ export const env = {
     return getPositiveInteger('SEARCH_CACHE_MAX_ENTRIES', 500);
   },
 
+  /** Whether keyword results are fused with vector results */
+  get hybridSearchEnabled(): boolean {
+    return getEnv('SEARCH_HYBRID_ENABLED') !== 'false';
+  },
+
   /**
    * Node environment (development, production, test)
    */

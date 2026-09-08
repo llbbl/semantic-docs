@@ -39,10 +39,36 @@ semantic-docs/
 - local development database: `file:local.db` when Turso credentials are absent
 - result cache: 500 entries, 5 minute TTL, per process
   (`SEARCH_CACHE_TTL_SECONDS`, `SEARCH_CACHE_MAX_ENTRIES`; `0` disables)
+- keyword index: `articles_cf_bgem3_1024_fts` (FTS5 over title, content, tags)
+- retrieval: hybrid, keyword and vector fused by reciprocal rank fusion
+  (`SEARCH_HYBRID_ENABLED=false` falls back to vector only)
 
 Those values are defined in [searchConfig.ts](../src/lib/searchConfig.ts).
 
+### Hybrid Retrieval
+
+Each query runs an FTS5 keyword search and a vector search concurrently, then
+merges the two ranked lists by reciprocal rank fusion. Keyword retrieval covers
+what dense embeddings handle worst — exact identifiers, error strings, flag
+names — while vector retrieval still answers conversational queries.
+
+Every query term is emitted as a quoted FTS5 phrase. That neutralizes the query
+language (a bare `AND`, `*` or unbalanced quote would otherwise be parsed as
+syntax) and makes identifier lookup precise: `"TURSO_DB_URL"` matches only where
+those tokens are adjacent.
+
+Each retriever returns three times the requested limit before fusion, since
+fusion can only reorder what it is given. Exact score ties are broken in favour
+of the keyword list.
+
+The keyword index is created by `pnpm db:init` and rebuilt by `pnpm index`. If
+it is missing, search logs a warning and returns vector-only results rather than
+failing — so upgrading code before re-running `db:init` degrades rather than
+breaks.
+
 `/api/search.json` returns `id, slug, title, folder, tags, distance, excerpt`.
+`distance` is null for a document found only by keyword, since bm25 relevance
+and vector distance are unrelated scales.
 The excerpt is a ~160 character plain-text window built by
 [excerpt.ts](../src/lib/excerpt.ts), centered on the first query term where the
 article contains one. Article bodies are never sent to the client.
