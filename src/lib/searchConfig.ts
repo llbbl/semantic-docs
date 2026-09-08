@@ -16,6 +16,18 @@ export const FUSION_CANDIDATE_MULTIPLIER = 3;
 // retriever cannot dominate the merged list.
 export const RRF_K = 60;
 
+// Per-retriever weights, applied to each list's fusion contribution. Vector is
+// trusted slightly more: search fires on short debounced queries, where bm25
+// over OR-ed single tokens is at its noisiest, and a keyword artifact taking
+// the top slot on a conversational query is the regression a docs search is
+// judged on. Unequal by construction, so two retrievers can never tie exactly
+// and no positional tie-break is needed. A tuning knob, not a constant of
+// nature — revisit against a real corpus.
+export const FUSION_WEIGHTS = {
+  keyword: 0.85,
+  vector: 1,
+} as const;
+
 // Fixed by @cf/baai/bge-m3, the only model Workers AI exposes through this
 // adapter. The table's F32_BLOB width must equal it exactly.
 export const EMBEDDING_DIMENSIONS = 1024;

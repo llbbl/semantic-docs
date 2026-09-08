@@ -13,6 +13,7 @@ import { type KeywordResult, keywordSearch } from '@/lib/keywordSearch';
 import { createSearchCache, searchCacheKey } from '@/lib/searchCache';
 import {
   FUSION_CANDIDATE_MULTIPLIER,
+  FUSION_WEIGHTS,
   getEmbeddingOptions,
   SEARCH_EMBEDDING_TIMEOUT_MS,
   SEARCH_TABLE_NAME,
@@ -298,10 +299,12 @@ export const POST: APIRoute = async ({ request, site, clientAddress }) => {
     ]);
 
     // Keyword list first: where both retrievers found a document, the row that
-    // survives carries bm25's view of it, and its rank still comes from fusion.
+    // survives carries bm25's view of it. Ordering no longer decides ranking —
+    // the weights do — so this only chooses which row is returned.
     const matches = reciprocalRankFusion<KeywordResult | SearchResult>(
       [keywordMatches, vectorMatches],
       sanitizedLimit,
+      [FUSION_WEIGHTS.keyword, FUSION_WEIGHTS.vector],
     );
 
     const results: SearchResultPayload[] = matches.map((match) => ({

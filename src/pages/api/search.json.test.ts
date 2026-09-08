@@ -249,12 +249,21 @@ describe('Search API Route', () => {
       );
       const data = await response.json();
 
-      expect(data.results[0].slug).toBe('config');
-      // Keyword-only rows carry no comparable score.
-      expect(data.results[0].distance).toBeNull();
-      expect(data.results.map((r: { slug: string }) => r.slug)).toContain(
-        'unrelated',
+      const slugs = data.results.map((r: { slug: string }) => r.slug);
+
+      // The page defining the identifier now surfaces at all, which vector
+      // search alone never managed. It ranks second rather than first: with
+      // the vector list weighted above keyword, a document only bm25 found
+      // cannot outscore a document only the embedding found. Agreement, not
+      // list order, is what promotes a keyword hit to the top.
+      expect(slugs).toContain('config');
+      expect(slugs).toEqual(['unrelated', 'config']);
+
+      const config = data.results.find(
+        (r: { slug: string }) => r.slug === 'config',
       );
+      // Keyword-only rows carry no comparable score.
+      expect(config.distance).toBeNull();
     });
 
     it('should still answer when the keyword index is missing', async () => {

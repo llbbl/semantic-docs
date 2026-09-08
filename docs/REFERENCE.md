@@ -58,8 +58,16 @@ syntax) and makes identifier lookup precise: `"TURSO_DB_URL"` matches only where
 those tokens are adjacent.
 
 Each retriever returns three times the requested limit before fusion, since
-fusion can only reorder what it is given. Exact score ties are broken in favour
-of the keyword list.
+fusion can only reorder what it is given.
+
+The two lists are weighted rather than tie-broken: each contributes
+`weight / (k + rank)`, with vector at 1 and keyword at 0.85. Equal weights would
+make a rank-1 hit in either list score identically, and resolving that by
+argument order hands every disagreement to bm25 — deciding the top result for
+conversational queries, not just the exact-match ones keyword retrieval exists
+to serve. Unequal weights make that tie unreachable, and a keyword hit still
+wins when both retrievers agree on it. The weights are a tuning knob in
+`searchConfig.ts`.
 
 The keyword index is created by `pnpm db:init` and rebuilt by `pnpm index`, and
 is joined on `slug` rather than rowid because the indexer reinserts every
