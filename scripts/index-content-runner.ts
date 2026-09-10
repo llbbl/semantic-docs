@@ -13,6 +13,8 @@ export type IndexProgress = (
 export interface IndexingOperations {
   createTable: () => Promise<unknown>;
   indexContent: (onProgress: IndexProgress) => Promise<IndexingResult>;
+  /** Repopulate the keyword index from the rows just written. */
+  rebuildKeywordIndex?: () => Promise<void>;
 }
 
 export interface IndexingLogger {
@@ -36,6 +38,13 @@ export async function runContentIndexing(
     const result = await operations.indexContent((current, total, file) => {
       logger.info(`[${current}/${total}] Indexing: ${file}`);
     });
+
+    // After the vector rows land, so a failed embedding run never leaves a
+    // keyword index describing content that is not in the articles table.
+    if (operations.rebuildKeywordIndex) {
+      await operations.rebuildKeywordIndex();
+      logger.info('Rebuilt keyword index');
+    }
 
     logger.info('Indexing complete!');
     logger.info(

@@ -131,6 +131,13 @@ export const env = {
     return getPositiveInteger('SEARCH_CACHE_MAX_ENTRIES', 500);
   },
 
+  /** Whether keyword results are fused with vector results */
+  get hybridSearchEnabled(): boolean {
+    const value = getEnv('SEARCH_HYBRID_ENABLED')?.trim().toLowerCase();
+    // A kill switch that silently ignores FALSE or 0 is worse than none.
+    return !(value === 'false' || value === '0' || value === 'off');
+  },
+
   /**
    * Node environment (development, production, test)
    */
