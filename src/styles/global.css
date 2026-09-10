@@ -176,3 +176,20 @@
     cursor: pointer;
   }
 }
+
+/*
+ * react-remove-scroll (via Radix Dialog, under the search palette) generates its
+ * scroll-lock stylesheet at runtime with a measured scrollbar width, which no
+ * build-time hash can cover, so CSP blocks it. It sets this attribute from a
+ * separate effect that CSP does not govern, so the lock is restored here.
+ * Gutter stability substitutes for the scrollbar-width compensation, which is
+ * not reproducible without the measurement.
+ */
+html {
+  scrollbar-gutter: stable;
+}
+
+body[data-scroll-locked] {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
