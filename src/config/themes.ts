@@ -309,20 +309,30 @@ export const themeNames: ThemeName[] = [
 
 export const defaultTheme: ThemeName = 'dark';
 
-export type FoucColors = Pick<
-  Theme['colors'],
-  'background' | 'foreground' | 'header' | 'sidebar' | 'toc'
->;
+/** camelCase color key to its CSS custom property (cardForeground -> --card-foreground). */
+export function themeColorCssVariable(key: string): string {
+  return `--${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+}
 
-export const foucThemes: Record<string, FoucColors> = Object.fromEntries(
+/** Every theme's complete token set, keyed by CSS variable name. */
+export const themeColorVariables: Record<
+  ThemeName,
+  Record<string, string>
+> = Object.fromEntries(
   themes.map((theme) => [
     theme.name,
-    {
-      background: theme.colors.background,
-      foreground: theme.colors.foreground,
-      header: theme.colors.header,
-      sidebar: theme.colors.sidebar,
-      toc: theme.colors.toc,
-    },
+    Object.fromEntries(
+      Object.entries(theme.colors).map(([key, value]) => [
+        themeColorCssVariable(key),
+        value,
+      ]),
+    ),
   ]),
-);
+) as Record<ThemeName, Record<string, string>>;
+
+// Runs inline in <head> before first paint. A partial token set leaves the
+// remaining variables at global.css's light-mode :root values, which is what
+// made borders flash white on navigation.
+export const themePrepaintScript = `(function(){try{var m=${JSON.stringify(
+  themeColorVariables,
+)},d='${defaultTheme}',t;try{t=localStorage.getItem('theme')}catch(e){}var c=Object.prototype.hasOwnProperty.call(m,t)?m[t]:m[d],s=document.documentElement.style;for(var k in c){s.setProperty(k,c[k])}}catch(e){}})();`;
