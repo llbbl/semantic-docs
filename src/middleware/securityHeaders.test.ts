@@ -65,6 +65,15 @@ describe('applySecurityHeaders', () => {
       'Content-Security-Policy',
     );
   });
+
+  // Response.redirect() returns immutable headers, where set() throws. Serving
+  // the response without these beats failing the request.
+  it('gives up quietly on immutable headers rather than throwing', () => {
+    const headers = Response.redirect('https://example.com/', 302).headers;
+
+    expect(() => applySecurityHeaders(headers)).not.toThrow();
+    expect(headers.has('X-Content-Type-Options')).toBe(false);
+  });
 });
 
 describe('middleware wiring', () => {
