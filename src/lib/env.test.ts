@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { env, getEnv, getRequiredEnv } from './env';
 
@@ -25,7 +27,7 @@ describe('getEnv', () => {
     expect(getEnv('TEST_KEY')).toBe('process-value');
   });
 
-  it('should fall back to process.env when import.meta.env is empty', () => {
+  it('should read process.env even when the value is empty elsewhere', () => {
     vi.stubEnv('TEST_KEY', '');
     process.env.TEST_KEY = 'process-value';
 
@@ -131,4 +133,21 @@ describe('env getters', () => {
     expect(env.rateLimitTrustedProxyHops).toBe(2);
     expect(env.rateLimitMaxEntries).toBe(500);
   });
+});
+
+describe('server env sources', () => {
+  const serverEnvModules = ['src/lib/env.ts', 'src/lib/turso.ts'];
+
+  it.each(serverEnvModules)(
+    'should not read import.meta.env in %s',
+    async (file) => {
+      const source = await readFile(resolve(process.cwd(), file), 'utf8');
+      const code = source.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+
+      // Vite replaces import.meta.env at build time, and an indexed read
+      // replaces the whole object, so every variable present during the build
+      // is serialized into the bundle the container images ship.
+      expect(code).not.toContain('import.meta.env');
+    },
+  );
 });

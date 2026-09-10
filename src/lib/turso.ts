@@ -5,14 +5,14 @@
 
 import { type Client, createClient } from '@libsql/client';
 import { logger } from 'logan-logger';
+import { getEnv } from './env';
 
 let client: Client | null = null;
 
 export function getTursoClient(): Client {
   if (!client) {
-    const url = import.meta.env.TURSO_DB_URL || process.env.TURSO_DB_URL;
-    const authToken =
-      import.meta.env.TURSO_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN;
+    const url = getEnv('TURSO_DB_URL');
+    const authToken = getEnv('TURSO_AUTH_TOKEN');
 
     if (url && authToken) {
       // Use Turso remote database
