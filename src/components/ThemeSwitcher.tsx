@@ -4,7 +4,12 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { defaultTheme, type ThemeName, themes } from '@/config/themes';
+import {
+  defaultTheme,
+  type ThemeName,
+  themeColorCssVariable,
+  themes,
+} from '@/config/themes';
 
 export default function ThemeSwitcher() {
   const [currentTheme, setCurrentTheme] = useState<ThemeName>(defaultTheme);
@@ -19,8 +24,7 @@ export default function ThemeSwitcher() {
 
     const root = document.documentElement;
     Object.entries(theme.colors).forEach(([key, value]) => {
-      const cssVar = `--${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
-      root.style.setProperty(cssVar, value);
+      root.style.setProperty(themeColorCssVariable(key), value);
     });
 
     try {
