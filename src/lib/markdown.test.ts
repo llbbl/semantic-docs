@@ -187,4 +187,104 @@ describe('marked', () => {
       expect(result).toContain('<blockquote>');
     });
   });
+
+  describe('syntax highlighting', () => {
+    it('should highlight a fenced block with a known language', async () => {
+      const result = await marked('```ts\nconst x = 1; // note\n```');
+      expect(result).toContain('<div class="code-block">');
+      expect(result).toContain('<pre class="shiki">');
+      expect(result).toContain('<code class="language-ts">');
+      expect(result).toContain('class="sh-keyword"');
+      expect(result).toContain('class="sh-comment"');
+    });
+
+    it('should resolve language aliases', async () => {
+      const result = await marked('```sh\necho hi\n```');
+      expect(result).toContain('class="language-sh"');
+      expect(result).toContain('class="sh-');
+    });
+
+    it('should fall back to plain rendering for an unknown language', async () => {
+      const result = await marked('```brainfuck\n+++.\n```');
+      expect(result).toContain('<pre><code class="language-brainfuck">');
+      expect(result).not.toContain('class="sh-');
+    });
+
+    it('should fall back to plain rendering for an unfenced-language block', async () => {
+      const result = await marked('```\njust text\n```');
+      expect(result).toContain('<pre><code>just text');
+      expect(result).not.toContain('class="sh-');
+    });
+
+    it('should still wrap plain blocks so they get a copy button', async () => {
+      const result = await marked('```\njust text\n```');
+      expect(result).toContain('<div class="code-block">');
+    });
+
+    it('should escape HTML inside a highlighted block', async () => {
+      const result = await marked(
+        '```ts\nconst s = "<img src=x onerror=alert(1)>";\n```',
+      );
+      // The attribute text survives as escaped content, which is the point:
+      // it is displayed, never parsed as markup.
+      expect(result).not.toContain('<img');
+      expect(result).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    });
+
+    it('should escape HTML inside a plain block', async () => {
+      const result = await marked('```\n<script>alert(1)</script>\n```');
+      expect(result).not.toContain('<script');
+      expect(result).toContain('&lt;script');
+    });
+
+    it('should not emit a language class for a malformed fence info string', async () => {
+      const result = await marked('```<script>\nx\n```');
+      expect(result).not.toContain('<script');
+      expect(result).not.toContain('class="language-');
+    });
+  });
+
+  describe('class and style sanitization', () => {
+    it('should not let any inline style attribute survive', async () => {
+      const result = await marked(
+        [
+          '```ts',
+          'const x: number = 1; // note',
+          '```',
+          '',
+          '```python',
+          'def f(a):\n    return f"v={a}"',
+          '```',
+          '',
+          '<p style="color:red">styled</p>',
+          '',
+          '<span style="color:red" class="sh-keyword">also styled</span>',
+        ].join('\n'),
+      );
+      expect(result).not.toMatch(/style\s*=/);
+    });
+
+    it('should strip classes that are not on the allowlist', async () => {
+      const result = await marked(
+        '<div class="code-block evil"><span class="sh-keyword nope">x</span></div>',
+      );
+      expect(result).toContain('class="code-block"');
+      expect(result).toContain('class="sh-keyword"');
+      expect(result).not.toContain('evil');
+      expect(result).not.toContain('nope');
+    });
+
+    it('should strip classes from tags that allow none', async () => {
+      const result = await marked('<p class="sh-keyword">x</p>');
+      expect(result).toContain('<p>x</p>');
+    });
+
+    it('should reject a language class that is not a plain language name', async () => {
+      const result = await marked(
+        '<code class="language-ts">ok</code> <code class="language- bad">no</code>',
+      );
+      expect(result).toContain('<code class="language-ts">');
+      expect(result).not.toContain('bad');
+    });
+  });
 });

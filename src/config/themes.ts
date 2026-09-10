@@ -57,6 +57,21 @@ export interface Theme {
     toc: string;
     tocForeground: string;
     tocBorder: string;
+    // Syntax token colors. These ride the same variable pipeline as every other
+    // token, which is what lets a build-time-highlighted page restyle itself on
+    // a theme switch without being re-highlighted.
+    syntaxComment: string;
+    syntaxKeyword: string;
+    syntaxString: string;
+    syntaxStringExpression: string;
+    syntaxConstant: string;
+    syntaxFunction: string;
+    syntaxParameter: string;
+    syntaxPunctuation: string;
+    syntaxLink: string;
+    syntaxInserted: string;
+    syntaxDeleted: string;
+    syntaxChanged: string;
   };
 }
 
@@ -98,6 +113,18 @@ export const themes: Theme[] = [
       toc: '#262626',
       tocForeground: '#fafafa',
       tocBorder: '#1a1a1a',
+      syntaxComment: '#8b949e',
+      syntaxKeyword: '#ff7b72',
+      syntaxString: '#a5d6ff',
+      syntaxStringExpression: '#a5d6ff',
+      syntaxConstant: '#79c0ff',
+      syntaxFunction: '#d2a8ff',
+      syntaxParameter: '#ffa657',
+      syntaxPunctuation: '#c9d1d9',
+      syntaxLink: '#79c0ff',
+      syntaxInserted: '#3fb950',
+      syntaxDeleted: '#f85149',
+      syntaxChanged: '#d29922',
     },
   },
   {
@@ -137,6 +164,18 @@ export const themes: Theme[] = [
       toc: '#fafafa',
       tocForeground: '#171717',
       tocBorder: '#e5e7eb',
+      syntaxComment: '#6e7781',
+      syntaxKeyword: '#cf222e',
+      syntaxString: '#0a3069',
+      syntaxStringExpression: '#0a3069',
+      syntaxConstant: '#0550ae',
+      syntaxFunction: '#8250df',
+      syntaxParameter: '#953800',
+      syntaxPunctuation: '#24292f',
+      syntaxLink: '#0550ae',
+      syntaxInserted: '#1a7f37',
+      syntaxDeleted: '#cf222e',
+      syntaxChanged: '#9a6700',
     },
   },
   {
@@ -176,6 +215,18 @@ export const themes: Theme[] = [
       toc: '#0f2942',
       tocForeground: '#e0f2fe',
       tocBorder: '#1e3a5f',
+      syntaxComment: '#7f9cb8',
+      syntaxKeyword: '#38bdf8',
+      syntaxString: '#5eead4',
+      syntaxStringExpression: '#5eead4',
+      syntaxConstant: '#a5b4fc',
+      syntaxFunction: '#67e8f9',
+      syntaxParameter: '#fbbf24',
+      syntaxPunctuation: '#bae6fd',
+      syntaxLink: '#38bdf8',
+      syntaxInserted: '#2dd4bf',
+      syntaxDeleted: '#f87171',
+      syntaxChanged: '#fbbf24',
     },
   },
   {
@@ -215,6 +266,18 @@ export const themes: Theme[] = [
       toc: '#14291a',
       tocForeground: '#d1fae5',
       tocBorder: '#1a3d23',
+      syntaxComment: '#7f9e88',
+      syntaxKeyword: '#34d399',
+      syntaxString: '#bef264',
+      syntaxStringExpression: '#bef264',
+      syntaxConstant: '#86efac',
+      syntaxFunction: '#5eead4',
+      syntaxParameter: '#fcd34d',
+      syntaxPunctuation: '#a7f3d0',
+      syntaxLink: '#34d399',
+      syntaxInserted: '#4ade80',
+      syntaxDeleted: '#f87171',
+      syntaxChanged: '#fbbf24',
     },
   },
   {
@@ -254,6 +317,18 @@ export const themes: Theme[] = [
       toc: '#2a1510',
       tocForeground: '#fef3c7',
       tocBorder: '#3d1f15',
+      syntaxComment: '#b08968',
+      syntaxKeyword: '#fb923c',
+      syntaxString: '#fde68a',
+      syntaxStringExpression: '#fde68a',
+      syntaxConstant: '#fca5a5',
+      syntaxFunction: '#fcd34d',
+      syntaxParameter: '#f9a8d4',
+      syntaxPunctuation: '#fed7aa',
+      syntaxLink: '#fb923c',
+      syntaxInserted: '#84cc16',
+      syntaxDeleted: '#ef4444',
+      syntaxChanged: '#fbbf24',
     },
   },
   {
@@ -293,6 +368,18 @@ export const themes: Theme[] = [
       toc: '#241129',
       tocForeground: '#f3e8ff',
       tocBorder: '#2e1a3d',
+      syntaxComment: '#a78bb9',
+      syntaxKeyword: '#c084fc',
+      syntaxString: '#f0abfc',
+      syntaxStringExpression: '#f0abfc',
+      syntaxConstant: '#d8b4fe',
+      syntaxFunction: '#a5b4fc',
+      syntaxParameter: '#fcd34d',
+      syntaxPunctuation: '#e9d5ff',
+      syntaxLink: '#c084fc',
+      syntaxInserted: '#4ade80',
+      syntaxDeleted: '#f472b6',
+      syntaxChanged: '#fbbf24',
     },
   },
 ];
