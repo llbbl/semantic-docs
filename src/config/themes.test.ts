@@ -3,6 +3,7 @@ import {
   defaultTheme,
   themeColorCssVariable,
   themeColorVariables,
+  themeNames,
   themePrepaintScript,
   themes,
 } from './themes';
@@ -56,6 +57,18 @@ describe('theme color prepaint configuration', () => {
     }
   });
 
+  it('covers every declared theme name', () => {
+    // themes, themeNames and the ThemeName union are three separate lists
+    // that can drift; a union member missing from themes is undefined at runtime.
+    expect(Object.keys(themeColorVariables).sort()).toEqual(
+      [...themeNames].sort(),
+    );
+  });
+
+  it('escapes < so a color value cannot terminate the script element', () => {
+    expect(themePrepaintScript).not.toContain('</');
+  });
+
   it.each(['--border', '--header-border', '--sidebar-border', '--toc-border'])(
     'carries %s, which global.css otherwise leaves at its light :root value',
     (variable) => {
@@ -65,7 +78,7 @@ describe('theme color prepaint configuration', () => {
     },
   );
 
-  it('applies the complete saved theme token set before paint', () => {
+  it('applies the saved theme token set before paint', () => {
     const { properties } = runPrepaintScript({ getItem: () => 'ocean' });
 
     expect(Object.fromEntries(properties)).toEqual(themeColorVariables.ocean);

@@ -333,6 +333,12 @@ export const themeColorVariables: Record<
 // Runs inline in <head> before first paint. A partial token set leaves the
 // remaining variables at global.css's light-mode :root values, which is what
 // made borders flash white on navigation.
+// JSON.stringify leaves "/" alone, so an unescaped "</script>" in a color value
+// would terminate the inline script element. The < escape is the same
+// character to the JS parser but inert to the HTML tokenizer.
 export const themePrepaintScript = `(function(){try{var m=${JSON.stringify(
   themeColorVariables,
+).replace(
+  /</g,
+  '\\u003c',
 )},d='${defaultTheme}',t;try{t=localStorage.getItem('theme')}catch(e){}var c=Object.prototype.hasOwnProperty.call(m,t)?m[t]:m[d],s=document.documentElement.style;for(var k in c){s.setProperty(k,c[k])}}catch(e){}})();`;
