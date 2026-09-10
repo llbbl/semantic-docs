@@ -168,3 +168,23 @@ describe('getNavArticles on a pre-migration table', () => {
     );
   });
 });
+
+describe('column value coercion', () => {
+  it.each([
+    ['unparseable JSON', 'not json'],
+    ['a JSON scalar rather than an array', '"just-a-string"'],
+    ['NULL', null],
+  ])('degrades tags to an empty array for %s', async (_label, tags) => {
+    await seed({ slug: 'tags', tags });
+
+    const [article] = await getNavArticles(client, TABLE);
+    expect(article.tags).toEqual([]);
+  });
+
+  it('treats a whitespace-only description as absent', async () => {
+    await seed({ slug: 'blank', description: '   ' });
+
+    const [article] = await getNavArticles(client, TABLE);
+    expect(article.description).toBeNull();
+  });
+});

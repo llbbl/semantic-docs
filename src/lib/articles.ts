@@ -20,11 +20,11 @@ function parseTags(value: unknown): string[] {
   }
 }
 
-/** libSQL returns INTEGER columns as number or bigint depending on width. */
+// The client's default intMode throws on an integer too wide for a JS number
+// rather than handing back a bigint, and SQLite stores neither NaN nor Infinity,
+// so anything that arrives as a number here is already usable.
 function parseOrder(value: unknown): number | null {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-  if (typeof value === 'bigint') return Number(value);
-  return null;
+  return typeof value === 'number' ? value : null;
 }
 
 function parseDescription(value: unknown): string | null {

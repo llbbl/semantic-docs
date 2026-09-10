@@ -193,3 +193,40 @@ describe('shipped folder configuration', () => {
     expect(configured).not.toEqual(alphabetical);
   });
 });
+
+describe('getArticleNeighbors edge cases', () => {
+  it('returns no neighbors for a slug not in the list', () => {
+    expect(
+      getArticleNeighbors([article({ slug: 'a', folder: 'docs' })], 'missing'),
+    ).toEqual({ previous: null, next: null });
+  });
+
+  // A null folder means the article sits at the top of ./content, and those
+  // are neighbors of each other rather than of any folder's contents.
+  it('groups articles with no folder under the root folder', () => {
+    const articles = [
+      article({ slug: 'one', folder: null, title: 'One', order: 1 }),
+      article({ slug: 'two', folder: null, title: 'Two', order: 2 }),
+      article({ slug: 'g/x', folder: 'guides', title: 'X', order: 1 }),
+    ];
+
+    expect(getArticleNeighbors(articles, 'one')).toMatchObject({
+      previous: null,
+      next: { slug: 'two' },
+    });
+    expect(getArticleNeighbors(articles, 'two')).toMatchObject({
+      previous: { slug: 'one' },
+      next: null,
+    });
+  });
+});
+
+describe('compareArticles ordering direction', () => {
+  const ordered = article({ slug: 'o', title: 'O', order: 1 });
+  const unordered = article({ slug: 'u', title: 'U', order: null });
+
+  it('sorts an unordered article after an ordered one, either way round', () => {
+    expect(compareArticles(unordered, ordered)).toBeGreaterThan(0);
+    expect(compareArticles(ordered, unordered)).toBeLessThan(0);
+  });
+});
