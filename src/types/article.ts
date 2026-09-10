@@ -39,5 +39,5 @@ export interface ArticleSearchResult {
   slug: string;
   folder: string;
   tags: string[];
-  distance: number;
+  distance: number | null;
 }

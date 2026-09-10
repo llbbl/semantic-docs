@@ -39,10 +39,47 @@ semantic-docs/
 - local development database: `file:local.db` when Turso credentials are absent
 - result cache: 500 entries, 5 minute TTL, per process
   (`SEARCH_CACHE_TTL_SECONDS`, `SEARCH_CACHE_MAX_ENTRIES`; `0` disables)
+- keyword index: `articles_cf_bgem3_1024_fts` (FTS5 over title, content, tags)
+- retrieval: hybrid, keyword and vector fused by reciprocal rank fusion
+  (`SEARCH_HYBRID_ENABLED=false` falls back to vector only)
 
 Those values are defined in [searchConfig.ts](../src/lib/searchConfig.ts).
 
+### Hybrid Retrieval
+
+Each query runs an FTS5 keyword search and a vector search concurrently, then
+merges the two ranked lists by reciprocal rank fusion. Keyword retrieval covers
+what dense embeddings handle worst — exact identifiers, error strings, flag
+names — while vector retrieval still answers conversational queries.
+
+Every query term is emitted as a quoted FTS5 phrase. That neutralizes the query
+language (a bare `AND`, `*` or unbalanced quote would otherwise be parsed as
+syntax) and makes identifier lookup precise: `"TURSO_DB_URL"` matches only where
+those tokens are adjacent.
+
+Each retriever returns three times the requested limit before fusion, since
+fusion can only reorder what it is given.
+
+The two lists are weighted rather than tie-broken: each contributes
+`weight / (k + rank)`, with vector at 1 and keyword at 0.85. Equal weights would
+make a rank-1 hit in either list score identically, and resolving that by
+argument order hands every disagreement to bm25 — deciding the top result for
+conversational queries, not just the exact-match ones keyword retrieval exists
+to serve. Unequal weights make that tie unreachable, and a keyword hit still
+wins when both retrievers agree on it. The weights are a tuning knob in
+`searchConfig.ts`.
+
+The keyword index is created by `pnpm db:init` and rebuilt by `pnpm index`, and
+is joined on `slug` rather than rowid because the indexer reinserts every
+article with a new id. A missing index logs a warning and yields vector-only
+results; an index that exists but was never populated returns zero rows
+silently, so verify both steps ran after an upgrade.
+
 `/api/search.json` returns `id, slug, title, folder, tags, distance, excerpt`.
+`distance` is null for any document the keyword retriever returned, not only
+those it alone found: fusion keeps the first-seen row and keyword results merge
+first. bm25 relevance and vector distance are unrelated scales, so there is no
+single comparable score to report.
 The excerpt is a ~160 character plain-text window built by
 [excerpt.ts](../src/lib/excerpt.ts), centered on the first query term where the
 article contains one. Article bodies are never sent to the client.

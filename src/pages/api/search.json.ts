@@ -3,13 +3,17 @@
  * Uses libsql-search for semantic search
  */
 
-import { search } from '@logan/libsql-search';
+import { type SearchResult, search } from '@logan/libsql-search';
 import type { APIRoute } from 'astro';
 import { logger } from 'logan-logger';
 import { env } from '@/lib/env';
 import { buildExcerpt } from '@/lib/excerpt';
+import { reciprocalRankFusion } from '@/lib/fusion';
+import { type KeywordResult, keywordSearch } from '@/lib/keywordSearch';
 import { createSearchCache, searchCacheKey } from '@/lib/searchCache';
 import {
+  FUSION_CANDIDATE_MULTIPLIER,
+  FUSION_WEIGHTS,
   getEmbeddingOptions,
   SEARCH_EMBEDDING_TIMEOUT_MS,
   SEARCH_TABLE_NAME,
@@ -31,7 +35,12 @@ export interface SearchResultPayload {
   title: string;
   folder: string;
   tags: string[];
-  distance: number;
+  /**
+   * Vector distance, or null for any document the keyword retriever returned.
+   * Fusion keeps the first-seen row and keyword results are merged first, so a
+   * document both retrievers found still reports null.
+   */
+  distance: number | null;
   excerpt: string;
 }
 
@@ -262,18 +271,41 @@ export const POST: APIRoute = async ({ request, site, clientAddress }) => {
 
     const client = getTursoClient();
 
-    // Perform vector search using centralized env config
-    const matches = await search({
-      client,
-      query: normalizedQuery,
-      limit: sanitizedLimit,
-      tableName: SEARCH_TABLE_NAME,
-      embeddingOptions: getEmbeddingOptions({
-        timeoutMs: SEARCH_EMBEDDING_TIMEOUT_MS,
-        // Abandon the upstream call when the client goes away.
-        signal: request.signal,
+    // Over-fetch only when there are two lists to fuse. With hybrid off there
+    // is nothing to reorder, and the extra rows carry full article bodies.
+    const hybrid = env.hybridSearchEnabled;
+    const candidateLimit = hybrid
+      ? sanitizedLimit * FUSION_CANDIDATE_MULTIPLIER
+      : sanitizedLimit;
+
+    // Both retrievers run concurrently. The keyword half is local to the
+    // database, so it adds no latency beyond the embedding round trip that
+    // already dominates the request.
+    const [vectorMatches, keywordMatches] = await Promise.all([
+      search({
+        client,
+        query: normalizedQuery,
+        limit: candidateLimit,
+        tableName: SEARCH_TABLE_NAME,
+        embeddingOptions: getEmbeddingOptions({
+          timeoutMs: SEARCH_EMBEDDING_TIMEOUT_MS,
+          // Abandon the upstream call when the client goes away.
+          signal: request.signal,
+        }),
       }),
-    });
+      hybrid
+        ? keywordSearch(client, normalizedQuery, candidateLimit)
+        : Promise.resolve([]),
+    ]);
+
+    // Keyword list first: where both retrievers found a document, the row that
+    // survives carries bm25's view of it. Ordering no longer decides ranking —
+    // the weights do — so this only chooses which row is returned.
+    const matches = reciprocalRankFusion<KeywordResult | SearchResult>(
+      [keywordMatches, vectorMatches],
+      sanitizedLimit,
+      [FUSION_WEIGHTS.keyword, FUSION_WEIGHTS.vector],
+    );
 
     const results: SearchResultPayload[] = matches.map((match) => ({
       id: match.id,
@@ -281,6 +313,9 @@ export const POST: APIRoute = async ({ request, site, clientAddress }) => {
       title: match.title,
       folder: match.folder,
       tags: match.tags,
+      // Null whenever the keyword retriever supplied the row: bm25 relevance
+      // and vector distance are unrelated scales, and fusion ranks by position
+      // rather than by either score.
       distance: match.distance,
       excerpt: buildExcerpt(match.content, normalizedQuery),
     }));

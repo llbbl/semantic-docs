@@ -207,6 +207,142 @@ describe('Search API Route', () => {
       expect(data.results[0].excerpt).toContain('TURSO_DB_URL');
     });
 
+    it('should surface a keyword-only hit that vector search missed', async () => {
+      // The identifier case: the embedding does not rank the defining page,
+      // but bm25 puts it first.
+      vi.mocked(search).mockResolvedValueOnce([
+        {
+          id: 1,
+          slug: 'unrelated',
+          title: 'Unrelated',
+          folder: 'docs',
+          tags: [],
+          distance: 0.9,
+          content: 'nothing to do with it',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ]);
+      vi.mocked(getTursoClient).mockReturnValue({
+        execute: vi.fn().mockResolvedValue({
+          rows: [
+            {
+              id: 42,
+              slug: 'config',
+              title: 'Configuration',
+              content: 'The TURSO_DB_URL setting names the database.',
+              folder: 'docs',
+              tags: '[]',
+            },
+          ],
+        }),
+      } as unknown as ReturnType<typeof getTursoClient>);
+
+      const response = await POST(
+        createMockContext(
+          new Request('http://localhost/api/search.json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: 'TURSO_DB_URL' }),
+          }),
+          '192.0.2.21',
+        ),
+      );
+      const data = await response.json();
+
+      const slugs = data.results.map((r: { slug: string }) => r.slug);
+
+      // The page defining the identifier now surfaces at all, which vector
+      // search alone never managed. It ranks second rather than first: with
+      // the vector list weighted above keyword, a document only bm25 found
+      // cannot outscore a document only the embedding found. Agreement, not
+      // list order, is what promotes a keyword hit to the top.
+      expect(slugs).toContain('config');
+      expect(slugs).toEqual(['unrelated', 'config']);
+
+      const config = data.results.find(
+        (r: { slug: string }) => r.slug === 'config',
+      );
+      // Keyword-only rows carry no comparable score.
+      expect(config.distance).toBeNull();
+    });
+
+    it('should still answer when the keyword index is missing', async () => {
+      vi.mocked(search).mockResolvedValueOnce([
+        {
+          id: 1,
+          slug: 'only',
+          title: 'Only',
+          folder: 'docs',
+          tags: [],
+          distance: 0.2,
+          content: 'body',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ]);
+      vi.mocked(getTursoClient).mockReturnValue({
+        execute: vi.fn().mockRejectedValue(new Error('no such table')),
+      } as unknown as ReturnType<typeof getTursoClient>);
+
+      const response = await POST(
+        createMockContext(
+          new Request('http://localhost/api/search.json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: 'anything' }),
+          }),
+          '192.0.2.22',
+        ),
+      );
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.results[0].slug).toBe('only');
+    });
+
+    it('should not over-fetch candidates when hybrid search is disabled', async () => {
+      vi.stubEnv('SEARCH_HYBRID_ENABLED', 'false');
+      vi.mocked(search).mockResolvedValueOnce([]);
+
+      await POST(
+        createMockContext(
+          new Request('http://localhost/api/search.json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: 'no fusion', limit: 10 }),
+          }),
+          '192.0.2.24',
+        ),
+      );
+
+      // Nothing to fuse, so the extra rows would be fetched and discarded.
+      expect(search).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: 10 }),
+      );
+    });
+
+    it('should skip keyword retrieval when hybrid search is disabled', async () => {
+      vi.stubEnv('SEARCH_HYBRID_ENABLED', 'false');
+      vi.mocked(search).mockResolvedValueOnce([]);
+
+      const execute = vi.fn().mockResolvedValue({ rows: [] });
+      vi.mocked(getTursoClient).mockReturnValue({
+        execute,
+      } as unknown as ReturnType<typeof getTursoClient>);
+
+      await POST(
+        createMockContext(
+          new Request('http://localhost/api/search.json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: 'disabled path' }),
+          }),
+          '192.0.2.23',
+        ),
+      );
+
+      expect(execute).not.toHaveBeenCalled();
+    });
+
     it('should return 400 for missing query', async () => {
       const request = new Request('http://localhost/api/search.json', {
         method: 'POST',
@@ -289,9 +425,8 @@ describe('Search API Route', () => {
       );
     });
 
-    it('should use default limit of 10 when not provided', async () => {
-      const mockResults: SearchResult[] = [];
-      vi.mocked(search).mockResolvedValueOnce(mockResults);
+    it('should over-fetch candidates for fusion on the default limit', async () => {
+      vi.mocked(search).mockResolvedValueOnce([]);
 
       const request = new Request('http://localhost/api/search.json', {
         method: 'POST',
@@ -301,12 +436,41 @@ describe('Search API Route', () => {
 
       await POST(createMockContext(request));
 
+      // Fusion can only reorder what it is given, so each retriever is asked
+      // for FUSION_CANDIDATE_MULTIPLIER times the requested limit.
       expect(search).toHaveBeenCalledWith(
-        expect.objectContaining({
-          query: 'test',
-          limit: 10,
-        }),
+        expect.objectContaining({ query: 'test', limit: 30 }),
       );
+    });
+
+    it('should still return no more than the requested limit', async () => {
+      vi.mocked(search).mockResolvedValueOnce(
+        Array.from({ length: 30 }, (_, index) => ({
+          id: index + 1,
+          slug: `s${index}`,
+          title: `T${index}`,
+          folder: 'docs',
+          tags: [],
+          distance: 0.1,
+          content: 'body',
+          created_at: '2024-01-01T00:00:00Z',
+        })),
+      );
+
+      const response = await POST(
+        createMockContext(
+          new Request('http://localhost/api/search.json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: 'limit check', limit: 4 }),
+          }),
+          '192.0.2.20',
+        ),
+      );
+      const data = await response.json();
+
+      expect(data.results).toHaveLength(4);
+      expect(data.count).toBe(4);
     });
 
     it('should return 500 on search error', async () => {

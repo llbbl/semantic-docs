@@ -11,6 +11,7 @@ import { env } from '../src/lib/env';
 import {
   EMBEDDING_DIMENSIONS,
   getEmbeddingOptions,
+  SEARCH_FTS_TABLE_NAME,
   SEARCH_TABLE_NAME,
 } from '../src/lib/searchConfig';
 import { runContentIndexing } from './index-content-runner';
@@ -39,6 +40,30 @@ if (!env.hasCloudflareCredentials) {
 
 const embeddingOptions = getEmbeddingOptions();
 
+/**
+ * Rebuild the keyword index from the rows just written. A full rebuild rather
+ * than an incremental update, because the indexer clears the articles table on
+ * every run; this keeps the two halves of hybrid search in step without
+ * assuming anything about how the rows got there.
+ */
+async function rebuildKeywordIndex(): Promise<void> {
+  await client.execute(
+    `CREATE VIRTUAL TABLE IF NOT EXISTS "${SEARCH_FTS_TABLE_NAME}" USING fts5(slug UNINDEXED, title, content, tags)`,
+  );
+
+  // One transaction: a clear that commits without its refill would leave the
+  // keyword index empty, and an empty index returns rows cleanly rather than
+  // erroring, so nothing downstream would notice.
+  await client.batch(
+    [
+      `DELETE FROM "${SEARCH_FTS_TABLE_NAME}"`,
+      `INSERT INTO "${SEARCH_FTS_TABLE_NAME}"(slug, title, content, tags)
+       SELECT slug, title, content, tags FROM "${SEARCH_TABLE_NAME}"`,
+    ],
+    'write',
+  );
+}
+
 process.exitCode = await runContentIndexing(
   {
     createTable: () =>
@@ -51,6 +76,7 @@ process.exitCode = await runContentIndexing(
         embeddingOptions,
         onProgress,
       }),
+    rebuildKeywordIndex,
   },
   logger,
 );
