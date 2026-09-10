@@ -127,3 +127,44 @@ describe('getNavArticles', () => {
     expect(await getNavArticles(client, TABLE)).toHaveLength(2);
   });
 });
+
+describe('getNavArticles on a pre-migration table', () => {
+  const LEGACY = 'articles_legacy';
+
+  beforeEach(async () => {
+    // The stock libsql-search shape: no sort_order, no description.
+    await client.execute(
+      `CREATE TABLE "${LEGACY}" (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT UNIQUE NOT NULL, title TEXT NOT NULL, content TEXT NOT NULL,
+        folder TEXT NOT NULL DEFAULT 'root', tags TEXT DEFAULT '[]',
+        created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+      )`,
+    );
+  });
+
+  afterEach(async () => {
+    await client.execute(`DROP TABLE IF EXISTS "${LEGACY}"`);
+  });
+
+  it('names the commands that fix it rather than only the missing column', async () => {
+    await expect(getNavArticles(client, LEGACY)).rejects.toThrow(
+      /missing the navigation columns.*pnpm db:init.*pnpm index/s,
+    );
+  });
+
+  it('keeps the underlying error as the cause', async () => {
+    const error = await getNavArticles(client, LEGACY).catch((e: unknown) => e);
+
+    expect((error as Error).cause).toBeInstanceOf(Error);
+    expect(String((error as Error).cause)).toMatch(/no such column/i);
+  });
+
+  // Only a missing column means "rerun db:init"; anything else must surface as
+  // itself rather than be relabelled.
+  it('rethrows an unrelated error unchanged', async () => {
+    await expect(getNavArticles(client, 'no_such_table')).rejects.toThrow(
+      /no such table/i,
+    );
+  });
+});
