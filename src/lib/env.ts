@@ -94,6 +94,22 @@ export const env = {
     );
   },
 
+  /**
+   * Base URL of an OpenAI-compatible embedding service, used instead of
+   * Workers AI when set. Exists so CI and forks can index and search without
+   * credentials; production leaves it unset.
+   */
+  get offlineEmbeddingsBaseUrl(): string | undefined {
+    return getEnv('OFFLINE_EMBEDDINGS_BASE_URL');
+  },
+
+  /** Whether either embedding provider is configured. */
+  get hasEmbeddingProvider(): boolean {
+    return (
+      Boolean(this.offlineEmbeddingsBaseUrl) || this.hasCloudflareCredentials
+    );
+  },
+
   /** Proxy header explicitly trusted for rate-limit client identity */
   get rateLimitTrustedProxyHeader(): RateLimitTrustedProxyHeader | undefined {
     const value = getEnv('RATE_LIMIT_TRUSTED_PROXY_HEADER');

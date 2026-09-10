@@ -10,11 +10,11 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    # Only a boolean lives at job level; a step cannot see its own `env` block
-    # from its condition, but the secrets themselves stay scoped to the one step
-    # that needs them rather than reaching every step in the job.
     env:
-      HAS_WORKERS_AI: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' && secrets.CLOUDFLARE_API_TOKEN != '' }}
+      # Deterministic local embeddings, so indexing, prerendering and search run
+      # identically for fork and Dependabot PRs, which never receive secrets.
+      OFFLINE_EMBEDDINGS_BASE_URL: http://127.0.0.1:8788/v1
+      OFFLINE_EMBEDDINGS_PORT: '8788'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,18 +39,28 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
+      - name: Start offline embedding service
+        run: |
+          pnpm embeddings:offline &
+          for _ in $(seq 1 40); do
+            curl -sf "http://127.0.0.1:${OFFLINE_EMBEDDINGS_PORT}/health" >/dev/null && exit 0
+            sleep 0.25
+          done
+          echo "offline embedding service did not start" >&2
+          exit 1
+
       - name: Initialize local database
         run: pnpm db:init:local
 
-      # Embeddings now come from Workers AI, so indexing needs credentials that
-      # fork PRs never receive. Without them the build still runs against the
-      # empty table created above and prerenders no article pages.
       - name: Index content to local database
-        if: env.HAS_WORKERS_AI == 'true'
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: pnpm index:local
 
       - name: Build
         run: pnpm build
+
+      # Exercises the built output: prerendered article pages, the health check,
+      # and a search request that embeds a query and reads vectors back. The unit
+      # suite mocks all of this, so a dependency bump that breaks rendering or
+      # search is invisible without it.
+      - name: Smoke test the built server
+        run: pnpm smoke

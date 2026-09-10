@@ -1,7 +1,16 @@
 import type { EmbeddingOptions } from '@logan/libsql-search';
-import { getRequiredEnv } from './env';
+import { env, getRequiredEnv } from './env';
 
-export const SEARCH_TABLE_NAME = 'articles_cf_bgem3_1024';
+// Deterministic local embeddings, so CI and fork PRs can index, prerender and
+// search without credentials. Its vectors are a different embedding space from
+// Workers AI, so it gets its own table rather than sharing one.
+const OFFLINE_MODEL = 'offline-hash';
+
+export const IS_OFFLINE_EMBEDDINGS = Boolean(env.offlineEmbeddingsBaseUrl);
+
+export const SEARCH_TABLE_NAME = IS_OFFLINE_EMBEDDINGS
+  ? 'articles_offline_hash_1024'
+  : 'articles_cf_bgem3_1024';
 
 // FTS5 index over the same rows, joined back by rowid = articles.id.
 export const SEARCH_FTS_TABLE_NAME = `${SEARCH_TABLE_NAME}_fts`;
@@ -29,7 +38,8 @@ export const FUSION_WEIGHTS = {
 } as const;
 
 // Fixed by @cf/baai/bge-m3, the only model Workers AI exposes through this
-// adapter. The table's F32_BLOB width must equal it exactly.
+// adapter. The table's F32_BLOB width must equal it exactly. The offline
+// provider matches it so both paths exercise the same schema.
 export const EMBEDDING_DIMENSIONS = 1024;
 
 // Query-time embedding is now a network call on the request path. The library
@@ -37,13 +47,24 @@ export const EMBEDDING_DIMENSIONS = 1024;
 export const SEARCH_EMBEDDING_TIMEOUT_MS = 5000;
 
 /**
- * Cloudflare Workers AI credentials for indexing and query-time embedding.
- * Throws rather than returning a partial config, so a missing credential
- * surfaces at the call site instead of as an opaque upstream 4xx.
+ * Embedding provider for indexing and query-time embedding. Throws rather than
+ * returning a partial config, so a missing credential surfaces at the call site
+ * instead of as an opaque upstream 4xx.
  */
 export function getEmbeddingOptions(
   overrides?: Pick<EmbeddingOptions, 'timeoutMs' | 'signal'>,
 ): EmbeddingOptions {
+  const offlineBaseUrl = env.offlineEmbeddingsBaseUrl;
+  if (offlineBaseUrl) {
+    return {
+      provider: 'openai-compatible',
+      baseUrl: offlineBaseUrl,
+      model: OFFLINE_MODEL,
+      dimensions: EMBEDDING_DIMENSIONS,
+      ...overrides,
+    };
+  }
+
   return {
     provider: 'cloudflare',
     accountId: getRequiredEnv('CLOUDFLARE_ACCOUNT_ID'),

@@ -177,3 +177,41 @@ describe('hybridSearchEnabled', () => {
     },
   );
 });
+
+describe('embedding provider configuration', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('reports the offline base URL when set', () => {
+    vi.stubEnv('OFFLINE_EMBEDDINGS_BASE_URL', 'http://127.0.0.1:8788/v1');
+
+    expect(env.offlineEmbeddingsBaseUrl).toBe('http://127.0.0.1:8788/v1');
+    expect(env.hasEmbeddingProvider).toBe(true);
+  });
+
+  it('accepts Workers AI credentials alone', () => {
+    vi.stubEnv('OFFLINE_EMBEDDINGS_BASE_URL', '');
+    vi.stubEnv('CLOUDFLARE_ACCOUNT_ID', 'account');
+    vi.stubEnv('CLOUDFLARE_API_TOKEN', 'token');
+
+    expect(env.hasEmbeddingProvider).toBe(true);
+  });
+
+  it('accepts the offline service without Cloudflare credentials', () => {
+    vi.stubEnv('OFFLINE_EMBEDDINGS_BASE_URL', 'http://127.0.0.1:8788/v1');
+    vi.stubEnv('CLOUDFLARE_ACCOUNT_ID', '');
+    vi.stubEnv('CLOUDFLARE_API_TOKEN', '');
+
+    expect(env.hasCloudflareCredentials).toBe(false);
+    expect(env.hasEmbeddingProvider).toBe(true);
+  });
+
+  it('reports no provider when neither is configured', () => {
+    vi.stubEnv('OFFLINE_EMBEDDINGS_BASE_URL', '');
+    vi.stubEnv('CLOUDFLARE_ACCOUNT_ID', '');
+    vi.stubEnv('CLOUDFLARE_API_TOKEN', '');
+
+    expect(env.hasEmbeddingProvider).toBe(false);
+  });
+});
