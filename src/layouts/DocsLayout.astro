@@ -31,6 +31,10 @@ const ogImage = image ? new URL(image, siteUrl).href : undefined;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
+    <!-- Referrer policy has a meta delivery mechanism of its own, unlike the
+         other header-only protections, so prerendered pages get it without any
+         edge configuration. Note this is name=, not http-equiv=. -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
