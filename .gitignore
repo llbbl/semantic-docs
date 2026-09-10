@@ -51,10 +51,8 @@ local.db-wal
 .gemini
 .agent
 
-# Agent instructions, local-only (AGENTS.md and GEMINI.md symlink to CLAUDE.md)
+# Agent instructions, local-only
 CLAUDE.md
-AGENTS.md
-GEMINI.md
 
 # Internal working documents
 _/
