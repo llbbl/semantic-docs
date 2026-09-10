@@ -1,5 +1,12 @@
-import { Marked } from 'marked';
+import { Marked, type Tokens } from 'marked';
 import sanitizeHtml from 'sanitize-html';
+import {
+  CODE_BLOCK_CLASS,
+  CODE_LINE_CLASS,
+  CODE_PRE_CLASS,
+  highlightCode,
+  SYNTAX_TOKEN_CLASSES,
+} from './codeHighlight';
 import { slugify } from './utils';
 
 // Allowlist of URL schemes considered safe to emit in href/src attributes.
@@ -37,6 +44,27 @@ function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (char) => htmlEscapes[char]);
 }
 
+/** marked's own fence class, e.g. `language-ts`, kept on both render paths. */
+const LANGUAGE_CLASS_PATTERN = /^language-[a-z0-9][a-z0-9+#._-]*$/i;
+
+/**
+ * The unhighlighted `<pre><code>` fallback, matching marked's default output.
+ * Reimplemented rather than delegated so every block, highlighted or not, gets
+ * the same wrapper and therefore the same copy button.
+ */
+function plainCodeBlock(token: Tokens.Code): string {
+  const lang = token.lang?.trim().split(/\s+/)[0] ?? '';
+  const className = `language-${lang}`;
+  const classAttr = LANGUAGE_CLASS_PATTERN.test(className)
+    ? ` class="${className}"`
+    : '';
+  // Matching marked's own trailing-newline handling: an indented block keeps
+  // its final newline in the token, so emitting one unconditionally leaves a
+  // blank line that the copy button then copies.
+  const text = escapeHtml(token.text.replace(/\n$/, ''));
+  return `<pre><code${classAttr}>${text}\n</code></pre>`;
+}
+
 /**
  * Builds a parser for a single document. The instance is per-call because the
  * heading slugger carries state, and sharing it across documents would number
@@ -44,9 +72,23 @@ function escapeHtml(text: string): string {
  */
 function createParser(): Marked {
   const usedIds = new Set<string>();
+  // Highlighting is async but marked's renderers are not, so walkTokens does the
+  // work up front and parks it here for the sync `code` renderer. The key type is
+  // a union because walkTokens narrows a code token only as far as Code | Generic.
+  const highlighted = new WeakMap<Tokens.Code | Tokens.Generic, string>();
 
   return new Marked({
+    async: true,
+    async walkTokens(token) {
+      if (token.type !== 'code') return;
+      const html = await highlightCode(token.text, token.lang);
+      if (html) highlighted.set(token, html);
+    },
     renderer: {
+      code(token) {
+        const inner = highlighted.get(token) ?? plainCodeBlock(token);
+        return `<div class="${CODE_BLOCK_CLASS}">${inner}</div>`;
+      },
       heading({ tokens, depth }) {
         // Slug the plain text, not the rendered inline HTML: otherwise a
         // heading containing code or a link folds tag names into its id
@@ -131,9 +173,14 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
     h4: ['id'],
     h5: ['id'],
     h6: ['id'],
-    code: ['class'],
-    pre: ['class'],
-    '*': ['class'], // Allow class on any element for styling
+  },
+  // `class` is carried by allowedClasses rather than allowedAttributes: an
+  // allowlisted tag keeps only the class names named here and loses the rest.
+  allowedClasses: {
+    div: [CODE_BLOCK_CLASS],
+    pre: [CODE_PRE_CLASS],
+    code: [LANGUAGE_CLASS_PATTERN],
+    span: [CODE_LINE_CLASS, ...SYNTAX_TOKEN_CLASSES],
   },
   allowedSchemes: ['http', 'https', 'mailto', 'tel'],
   allowedSchemesByTag: {
