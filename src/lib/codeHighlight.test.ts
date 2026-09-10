@@ -1,9 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { logger } from 'logan-logger';
+import { describe, expect, it, vi } from 'vitest';
 import {
   CODE_LINE_CLASS,
   CODE_PRE_CLASS,
+  createStyleToClassTransformer,
   highlightCode,
   isSupportedLanguage,
   SYNTAX_TOKEN_CLASSES,
@@ -135,5 +137,63 @@ describe('highlightCode', () => {
     for (const name of SYNTAX_TOKEN_CLASSES) {
       expect(css, `no style rule for .${name}`).toContain(`:global(.${name})`);
     }
+  });
+});
+
+describe('style-to-class transformer', () => {
+  function spanNode(style: string) {
+    return {
+      type: 'element' as const,
+      tagName: 'span' as const,
+      properties: { style } as Record<string, unknown>,
+      children: [],
+    };
+  }
+
+  // The real handler signature carries line, column and token arguments this
+  // one never reads, so the node is all a caller needs to supply.
+  type SpanHandler = (node: { properties: Record<string, unknown> }) => void;
+
+  function applySpan(style: string) {
+    const transformer = createStyleToClassTransformer();
+    const node = spanNode(style);
+    (transformer.span as unknown as SpanHandler).call(transformer, node);
+    return node.properties;
+  }
+
+  it('maps a known token variable to its class and drops the style', () => {
+    expect(applySpan('color:var(--shiki-token-keyword)')).toEqual({
+      style: undefined,
+      class: 'sh-keyword',
+    });
+  });
+
+  // A Shiki release that adds a token variable must fail to unstyled text
+  // rather than leaking an inline style past a strict style-src.
+  it('drops an unmapped token variable rather than emitting a style', () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+
+    const properties = applySpan('color:var(--shiki-token-invented)');
+
+    expect(properties.style).toBeUndefined();
+    expect(properties.class).toBeUndefined();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('Unmapped Shiki token variable'),
+      expect.objectContaining({ variable: '--shiki-token-invented' }),
+    );
+    warn.mockRestore();
+  });
+
+  it('leaves a span with no style untouched', () => {
+    const transformer = createStyleToClassTransformer();
+    const node = {
+      type: 'element' as const,
+      tagName: 'span' as const,
+      properties: {} as Record<string, unknown>,
+      children: [],
+    };
+    (transformer.span as unknown as SpanHandler).call(transformer, node);
+
+    expect(node.properties.class).toBeUndefined();
   });
 });

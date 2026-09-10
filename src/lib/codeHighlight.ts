@@ -118,7 +118,7 @@ function declarationToClass(declaration: string): string | null {
  * 'unsafe-inline' can serve the page. Class names are fixed rather than derived
  * from the style text, so the matching CSS can live in a static stylesheet.
  */
-function createStyleToClassTransformer(): ShikiTransformer {
+export function createStyleToClassTransformer(): ShikiTransformer {
   return {
     name: 'semantic-docs:style-to-class',
     pre(node) {
