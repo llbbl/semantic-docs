@@ -8,6 +8,7 @@ import { createClient } from '@libsql/client';
 import { createTable, indexContent } from '@logan/libsql-search';
 import { logger } from 'logan-logger';
 import { env } from '../src/lib/env';
+import { ensureNavColumns } from '../src/lib/navSchema';
 import {
   EMBEDDING_DIMENSIONS,
   getEmbeddingOptions,
@@ -15,6 +16,9 @@ import {
   SEARCH_TABLE_NAME,
 } from '../src/lib/searchConfig';
 import { runContentIndexing } from './index-content-runner';
+import { applyNavFrontmatter, collectNavFrontmatter } from './nav-frontmatter';
+
+const CONTENT_PATH = './content';
 
 // Initialize client (Turso or local libSQL)
 const url = process.env.TURSO_DB_URL;
@@ -66,16 +70,38 @@ async function rebuildKeywordIndex(): Promise<void> {
 
 process.exitCode = await runContentIndexing(
   {
-    createTable: () =>
-      createTable(client, SEARCH_TABLE_NAME, EMBEDDING_DIMENSIONS),
+    // Indexing runs against databases created before the navigation columns
+    // existed, so it migrates rather than assuming db:init was rerun.
+    createTable: async () => {
+      await createTable(client, SEARCH_TABLE_NAME, EMBEDDING_DIMENSIONS);
+      await ensureNavColumns(client, SEARCH_TABLE_NAME);
+    },
     indexContent: (onProgress) =>
       indexContent({
         client,
-        contentPath: './content',
+        contentPath: CONTENT_PATH,
         tableName: SEARCH_TABLE_NAME,
         embeddingOptions,
         onProgress,
       }),
+    applyNavFrontmatter: async () => {
+      const records = await collectNavFrontmatter(CONTENT_PATH);
+      const updated = await applyNavFrontmatter(
+        client,
+        SEARCH_TABLE_NAME,
+        records,
+      );
+
+      // A shortfall means a file on disk has no indexed row under the slug this
+      // pass derived, so its ordering and description are silently missing.
+      if (updated < records.length) {
+        logger.warn(
+          `Navigation frontmatter matched ${updated} of ${records.length} content files; the rest are not in the index under the expected slug`,
+        );
+      }
+
+      return updated;
+    },
     rebuildKeywordIndex,
   },
   logger,

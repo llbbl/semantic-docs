@@ -31,6 +31,26 @@ export interface ArticleSummary {
 }
 
 /**
+ * Article summary carrying the navigation fields this project persists on top
+ * of the libsql-search schema. `order` is frontmatter `order`, stored in the
+ * `sort_order` column because `order` is a SQL keyword.
+ */
+export interface ArticleNavSummary extends ArticleSummary {
+  /** null when the article declares no `order`; sorts after those that do. */
+  order: number | null;
+  /** Frontmatter `description`, used for meta tags. null when absent. */
+  description: string | null;
+}
+
+/**
+ * Neighbouring articles within a folder, in sidebar order.
+ */
+export interface ArticleNeighbors {
+  previous: ArticleNavSummary | null;
+  next: ArticleNavSummary | null;
+}
+
+/**
  * Search result with distance score
  */
 export interface ArticleSearchResult {

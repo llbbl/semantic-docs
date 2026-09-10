@@ -1,5 +1,7 @@
 ---
 title: Welcome to Your Docs
+description: Set up semantic-docs, index your first markdown files, and learn how the theme fits together.
+order: 1
 tags: [getting-started, introduction]
 ---
 

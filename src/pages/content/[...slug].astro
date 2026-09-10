@@ -1,20 +1,22 @@
 ---
 export const prerender = true;
 
-import { getAllArticles, getArticleBySlug } from '@logan/libsql-search';
+import { getArticleBySlug } from '@logan/libsql-search';
 import DocsHeader from '@/components/DocsHeader.astro';
 import DocsSidebar from '@/components/DocsSidebar.astro';
 import DocsTocWithErrorBoundary from '@/components/DocsTocWithErrorBoundary.tsx';
 import DocsLayout from '@/layouts/DocsLayout.astro';
+import { getNavArticles } from '@/lib/articles';
 import { marked } from '@/lib/markdown';
+import { getArticleNeighbors } from '@/lib/nav';
 import { SEARCH_TABLE_NAME } from '@/lib/searchConfig';
 import { getTursoClient } from '@/lib/turso';
-import type { Article } from '@/types/article';
+import type { ArticleNavSummary } from '@/types/article';
 
 // Generate static paths for all articles at build time
 export async function getStaticPaths() {
   const client = getTursoClient();
-  const allArticles = await getAllArticles(client, SEARCH_TABLE_NAME);
+  const allArticles = await getNavArticles(client, SEARCH_TABLE_NAME);
 
   return allArticles.map((article) => ({
     params: { slug: article.slug },
@@ -27,7 +29,7 @@ export async function getStaticPaths() {
 // guaranteed to be defined at build time — a missing one is a build-time
 // invariant violation, not a runtime 404.
 const { slug } = Astro.params;
-const { allArticles } = Astro.props as { allArticles: Article[] };
+const { allArticles } = Astro.props as { allArticles: ArticleNavSummary[] };
 
 if (!slug) {
   throw new Error('[...slug].astro reached without a slug param');
@@ -45,9 +47,15 @@ const htmlContent = await marked(article.content);
 
 // Parse tags
 const tags = article.tags;
+
+// getArticleBySlug selects the library's fixed column list, so the frontmatter
+// description comes from the nav rows already fetched for the sidebar.
+const navArticle = allArticles.find((entry) => entry.slug === slug);
+const description = navArticle?.description ?? article.title;
+const { previous, next } = getArticleNeighbors(allArticles, slug);
 ---
 
-<DocsLayout title={article.title} description={article.title}>
+<DocsLayout title={article.title} description={description}>
   <DocsHeader />
 
   <div class="flex">
@@ -70,6 +78,33 @@ const tags = article.tags;
           </header>
 
           <div class="article-content" set:html={htmlContent} />
+
+          {(previous || next) && (
+            <nav class="mt-12 pt-6 border-t border-border grid gap-4 sm:grid-cols-2" aria-label="Article navigation">
+              {previous ? (
+                <a
+                  href={`/content/${previous.slug}`}
+                  rel="prev"
+                  class="group flex flex-col gap-1 rounded-lg border border-border p-4 no-underline transition-colors hover:border-muted-foreground/50"
+                >
+                  <span class="text-xs text-muted-foreground">← Previous</span>
+                  <span class="text-sm font-medium text-foreground">{previous.title}</span>
+                </a>
+              ) : (
+                <div class="hidden sm:block" />
+              )}
+              {next && (
+                <a
+                  href={`/content/${next.slug}`}
+                  rel="next"
+                  class="group flex flex-col gap-1 rounded-lg border border-border p-4 no-underline transition-colors hover:border-muted-foreground/50 sm:text-right"
+                >
+                  <span class="text-xs text-muted-foreground">Next →</span>
+                  <span class="text-sm font-medium text-foreground">{next.title}</span>
+                </a>
+              )}
+            </nav>
+          )}
 
           <footer class="mt-12 pt-6 border-t border-border">
             <p class="text-sm text-muted-foreground">

@@ -1,5 +1,7 @@
 ---
 title: Semantic Search - AI-Powered Search
+description: How vector embeddings let search match on meaning rather than keywords, and how this theme wires them up.
+order: 1
 tags: [semantic-search, embeddings, ai, vector-search]
 ---
 

@@ -81,7 +81,8 @@ content/
     └── api.md
 ```
 
-Folders become sidebar groups, and frontmatter can define titles and tags.
+Folders become sidebar groups, and frontmatter can define `title`, `tags`,
+`description`, and `order`. Folder order is configured in `src/config/nav.ts`.
 
 ## Development Checks
 

@@ -7,6 +7,7 @@
 import { createClient } from '@libsql/client';
 import { createTable } from '@logan/libsql-search';
 import { logger } from 'logan-logger';
+import { ensureNavColumns } from '../src/lib/navSchema';
 import {
   EMBEDDING_DIMENSIONS,
   SEARCH_FTS_TABLE_NAME,
@@ -34,6 +35,17 @@ try {
   logger.info(
     `Created ${SEARCH_TABLE_NAME} with ${EMBEDDING_DIMENSIONS}-dimension embeddings`,
   );
+
+  // createTable is CREATE TABLE IF NOT EXISTS, so it leaves an existing table
+  // alone. This is what upgrades a deployment indexed before the navigation
+  // columns existed, without a separate migration step.
+  const addedColumns = await ensureNavColumns(client, SEARCH_TABLE_NAME);
+
+  if (addedColumns.length > 0) {
+    logger.info(
+      `Added navigation columns to ${SEARCH_TABLE_NAME}: ${addedColumns.join(', ')} (reindex to populate)`,
+    );
+  }
 
   // Keyword half of hybrid search. Kept as its own table rather than an
   // external-content one: the indexer clears and repopulates the articles

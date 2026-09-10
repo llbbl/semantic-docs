@@ -62,6 +62,8 @@ Example:
 ```markdown
 ---
 title: Getting Started
+description: What this page covers, used for the meta description and link previews.
+order: 1
 tags: [tutorial, beginner]
 ---
 
@@ -69,6 +71,15 @@ tags: [tutorial, beginner]
 
 Your content here.
 ```
+
+`order` sets the position in the sidebar within its folder, ascending. Articles
+without one sort after those that have one, by title. `description` fills the
+page's `<meta name="description">` and `og:description`, falling back to the
+title when absent. Both are read at index time, so rerun `pnpm index` after
+changing them.
+
+Folder order is configured in `src/config/nav.ts`. Folders left out of that
+list render after the listed ones, alphabetically.
 
 After adding or changing content, rebuild the index before building or
 deploying:

@@ -1,5 +1,7 @@
 ---
 title: Semantic Docs Theme Overview
+description: A tour of the Astro theme - hybrid rendering, the libSQL-backed sidebar, and the pieces you customize.
+order: 1
 tags: [astro, theme, documentation, semantic-search]
 ---
 
