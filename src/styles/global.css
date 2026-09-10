@@ -46,6 +46,18 @@
   --toc: #fafafa;
   --toc-foreground: #171717;
   --toc-border: #e5e7eb;
+  --syntax-comment: #6e7781;
+  --syntax-keyword: #cf222e;
+  --syntax-string: #0a3069;
+  --syntax-string-expression: #0a3069;
+  --syntax-constant: #0550ae;
+  --syntax-function: #8250df;
+  --syntax-parameter: #953800;
+  --syntax-punctuation: #24292f;
+  --syntax-link: #0550ae;
+  --syntax-inserted: #1a7f37;
+  --syntax-deleted: #cf222e;
+  --syntax-changed: #9a6700;
 }
 
 .dark {
@@ -87,6 +99,18 @@
   --toc: #262626;
   --toc-foreground: #fafafa;
   --toc-border: #1a1a1a;
+  --syntax-comment: #8b949e;
+  --syntax-keyword: #ff7b72;
+  --syntax-string: #a5d6ff;
+  --syntax-string-expression: #a5d6ff;
+  --syntax-constant: #79c0ff;
+  --syntax-function: #d2a8ff;
+  --syntax-parameter: #ffa657;
+  --syntax-punctuation: #c9d1d9;
+  --syntax-link: #79c0ff;
+  --syntax-inserted: #3fb950;
+  --syntax-deleted: #f85149;
+  --syntax-changed: #d29922;
 }
 
 @theme inline {
@@ -151,4 +175,21 @@
   input[type="reset"] {
     cursor: pointer;
   }
+}
+
+/*
+ * react-remove-scroll (via Radix Dialog, under the search palette) generates its
+ * scroll-lock stylesheet at runtime with a measured scrollbar width, which no
+ * build-time hash can cover, so CSP blocks it. It sets this attribute from a
+ * separate effect that CSP does not govern, so the lock is restored here.
+ * Gutter stability substitutes for the scrollbar-width compensation, which is
+ * not reproducible without the measurement.
+ */
+html {
+  scrollbar-gutter: stable;
+}
+
+body[data-scroll-locked] {
+  overflow: hidden;
+  overscroll-behavior: contain;
 }

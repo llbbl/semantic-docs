@@ -9,6 +9,7 @@
  */
 
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { logger } from 'logan-logger';
@@ -71,6 +72,56 @@ async function waitForServer(signal: AbortSignal): Promise<boolean> {
   return false;
 }
 
+/**
+ * Every inline script and style in the built HTML must be authorized by that
+ * page's own CSP. Source-level tests compare the hash to the script they both
+ * derive from and cannot see an encoding or embedding change that makes the two
+ * disagree once shipped — which breaks theming on every page, silently.
+ */
+function checkContentSecurityPolicy(): void {
+  const pages = [
+    'dist/client/index.html',
+    'dist/client/content/getting-started/welcome/index.html',
+  ];
+
+  for (const page of pages) {
+    const path = resolve(process.cwd(), page);
+    if (!existsSync(path)) continue;
+
+    const html = readFileSync(path, 'utf8');
+    const policy = /http-equiv="content-security-policy"[^>]*content="([^"]*)"/i
+      .exec(html)?.[1]
+      ?.replace(/&#39;/g, "'");
+
+    if (!policy) {
+      check(`CSP present in ${page}`, false, 'no meta http-equiv found');
+      continue;
+    }
+
+    check(
+      `CSP in ${page} has no unsafe-inline`,
+      !policy.includes('unsafe-inline') && !policy.includes('unsafe-eval'),
+      policy.slice(0, 200),
+    );
+
+    const inline = [
+      ...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi),
+      ...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi),
+    ].map((match) => match[1]);
+
+    const unauthorized = inline.filter((body) => {
+      const digest = createHash('sha256').update(body, 'utf8').digest('base64');
+      return !policy.includes(`sha256-${digest}`);
+    });
+
+    check(
+      `every inline script and style in ${page} is hashed by its CSP`,
+      unauthorized.length === 0,
+      `${unauthorized.length} unauthorized of ${inline.length}`,
+    );
+  }
+}
+
 async function checkHealth(): Promise<void> {
   const response = await fetch(`${BASE_URL}/api/health.json`);
   const body = (await response.json()) as {
@@ -129,6 +180,7 @@ async function checkSearch(): Promise<void> {
 
 async function main(): Promise<void> {
   checkPrerenderedPages();
+  checkContentSecurityPolicy();
 
   if (!existsSync(resolve(process.cwd(), SERVER_ENTRY))) {
     check(`${SERVER_ENTRY} exists`, false, 'run pnpm build first');

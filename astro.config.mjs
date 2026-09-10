@@ -6,6 +6,7 @@ import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'astro/config';
 import { isSiteUrlConfigured, siteUrl } from './src/config/site.ts';
+import { themePrepaintScriptHash } from './src/config/themeCsp.ts';
 
 // Promote a local .env into process.env, the only source the server reads.
 // Vite would otherwise surface these through import.meta.env, and an indexed
@@ -35,6 +36,27 @@ export default defineConfig({
     mode: 'standalone',
   }),
   integrations: [react()],
+  security: {
+    // Emitted as a <meta> element, the only mechanism that reaches a
+    // prerendered page: the adapter serves those from disk, so middleware never
+    // runs and a per-request nonce is impossible. Astro hashes the inline
+    // scripts and styles it generates itself, but not is:inline ones.
+    csp: {
+      directives: [
+        "default-src 'self'",
+        "base-uri 'self'",
+        "form-action 'none'",
+        "object-src 'none'",
+        "frame-src 'none'",
+        // Remote images in ./content would break under a bare 'self'. sanitize-html
+        // also admits http, which this deliberately narrows away.
+        "img-src 'self' data: https:",
+      ],
+      scriptDirective: {
+        hashes: [themePrepaintScriptHash],
+      },
+    },
+  },
   vite: {
     plugins: [tailwindcss()],
     resolve: {

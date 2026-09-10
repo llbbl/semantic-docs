@@ -225,6 +225,97 @@ const { previous, next } = getArticleNeighbors(allArticles, slug);
     font-size: 0.875rem;
   }
 
+  .article-content :global(.code-block) {
+    position: relative;
+    margin: 1.5rem 0;
+  }
+
+  .article-content :global(.code-block pre) {
+    margin: 0;
+  }
+
+  /* Shiki emits classes, not inline styles, so the palette resolves here from
+     the same theme variables the rest of the page uses. */
+  .article-content :global(.sh-text) {
+    color: var(--foreground);
+  }
+  .article-content :global(.sh-comment) {
+    color: var(--syntax-comment);
+  }
+  .article-content :global(.sh-keyword) {
+    color: var(--syntax-keyword);
+  }
+  .article-content :global(.sh-string) {
+    color: var(--syntax-string);
+  }
+  .article-content :global(.sh-string-expression) {
+    color: var(--syntax-string-expression);
+  }
+  .article-content :global(.sh-constant) {
+    color: var(--syntax-constant);
+  }
+  .article-content :global(.sh-function) {
+    color: var(--syntax-function);
+  }
+  .article-content :global(.sh-parameter) {
+    color: var(--syntax-parameter);
+  }
+  .article-content :global(.sh-punctuation) {
+    color: var(--syntax-punctuation);
+  }
+  .article-content :global(.sh-link) {
+    color: var(--syntax-link);
+  }
+  .article-content :global(.sh-inserted) {
+    color: var(--syntax-inserted);
+  }
+  .article-content :global(.sh-deleted) {
+    color: var(--syntax-deleted);
+  }
+  .article-content :global(.sh-changed) {
+    color: var(--syntax-changed);
+  }
+  .article-content :global(.sh-italic) {
+    font-style: italic;
+  }
+  .article-content :global(.sh-bold) {
+    font-weight: 700;
+  }
+  .article-content :global(.sh-underline) {
+    text-decoration: underline;
+  }
+
+  .article-content :global(.code-copy) {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    font-family: inherit;
+    line-height: 1.4;
+    color: var(--muted-foreground);
+    background: var(--secondary);
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    opacity: 0.55;
+    transition: opacity 0.15s ease, color 0.15s ease;
+  }
+
+  .article-content :global(.code-block:hover .code-copy),
+  .article-content :global(.code-copy:focus-visible),
+  .article-content :global(.code-copy[data-state]) {
+    opacity: 1;
+  }
+
+  .article-content :global(.code-copy[data-state='copied']) {
+    color: var(--primary);
+  }
+
+  .article-content :global(.code-copy[data-state='failed']) {
+    color: var(--destructive-foreground);
+    background: var(--destructive);
+  }
+
   .article-content :global(a) {
     color: var(--primary);
     text-decoration: underline;
@@ -279,3 +370,53 @@ const { previous, next } = getArticleNeighbors(allArticles, slug);
     font-weight: 600;
   }
 </style>
+
+<script>
+  // The button is injected rather than server-rendered so that a page without a
+  // usable Clipboard API (any non-secure context) shows no button at all rather
+  // than one that does nothing when pressed.
+  const clipboard = navigator.clipboard;
+
+  if (clipboard) {
+    const blocks = document.querySelectorAll<HTMLElement>(
+      '.article-content .code-block',
+    );
+
+    for (const block of blocks) {
+      const code = block.querySelector('pre code');
+      if (!code) continue;
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'code-copy';
+      button.textContent = 'Copy';
+      // Several buttons per page would otherwise all be named just "Copy".
+      const language = code.className.replace(/^language-/, '');
+      button.setAttribute(
+        'aria-label',
+        language ? `Copy ${language} code` : 'Copy code',
+      );
+      // The label carries the result, so announce it when it changes.
+      button.setAttribute('aria-live', 'polite');
+
+      let resetTimer = 0;
+      button.addEventListener('click', async () => {
+        try {
+          await clipboard.writeText(code.textContent ?? '');
+          button.textContent = 'Copied';
+          button.dataset.state = 'copied';
+        } catch {
+          button.textContent = 'Copy failed';
+          button.dataset.state = 'failed';
+        }
+        window.clearTimeout(resetTimer);
+        resetTimer = window.setTimeout(() => {
+          button.textContent = 'Copy';
+          delete button.dataset.state;
+        }, 2000);
+      });
+
+      block.appendChild(button);
+    }
+  }
+</script>
