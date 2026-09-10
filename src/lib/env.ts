@@ -4,34 +4,25 @@
  */
 
 /**
- * Get an environment variable from multiple sources
- * Checks import.meta.env first (Vite/Astro), then process.env (Node.js)
+ * Read a server-side environment variable.
+ *
+ * `process.env` only, deliberately. Vite replaces `import.meta.env` at build
+ * time — an indexed read replaces the whole object — so reading it here would
+ * serialize every variable present during the build into `dist/`, which the
+ * container images copy into the runtime layer. `astro.config.mjs` loads any
+ * `.env` into `process.env` before the app starts, so a `.env` still works.
+ *
  * @param key - The environment variable key
  * @param defaultValue - Optional default value if not found
  * @returns The environment variable value or default
  */
 export function getEnv(key: string, defaultValue?: string): string | undefined {
-  // Try Vite/Astro import.meta.env first
-  const metaEnvValue =
-    typeof import.meta !== 'undefined' && import.meta.env
-      ? import.meta.env[key]
-      : undefined;
-
-  if (metaEnvValue !== undefined && metaEnvValue !== '') {
-    return metaEnvValue;
-  }
-
-  // Fall back to process.env
-  const processEnvValue =
+  const value =
     typeof process !== 'undefined' && process.env
       ? process.env[key]
       : undefined;
 
-  if (processEnvValue !== undefined && processEnvValue !== '') {
-    return processEnvValue;
-  }
-
-  return defaultValue;
+  return value !== undefined && value !== '' ? value : defaultValue;
 }
 
 /**
