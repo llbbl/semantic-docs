@@ -4,42 +4,26 @@
  * Collapsible navigation populated from Turso database
  */
 
-import { getAllArticles } from '@logan/libsql-search';
+import { getNavArticles } from '@/lib/articles';
+import { groupArticlesByFolder } from '@/lib/nav';
 import { SEARCH_TABLE_NAME } from '@/lib/searchConfig';
 import { getTursoClient } from '@/lib/turso';
 import { formatFolderName } from '@/lib/utils';
-import type { ArticleSummary } from '@/types/article';
+import type { ArticleNavSummary } from '@/types/article';
 
 interface Props {
-  articles?: ArticleSummary[];
+  articles?: ArticleNavSummary[];
 }
 
 // Get current path for active state
 const currentPath = Astro.url.pathname;
 
 // Use provided articles or fetch from database
-let allArticles: ArticleSummary[];
-if (Astro.props.articles) {
-  allArticles = Astro.props.articles;
-} else {
-  const client = getTursoClient();
-  allArticles = (await getAllArticles(
-    client,
-    SEARCH_TABLE_NAME,
-  )) as ArticleSummary[];
-}
+const allArticles: ArticleNavSummary[] =
+  Astro.props.articles ??
+  (await getNavArticles(getTursoClient(), SEARCH_TABLE_NAME));
 
-const articlesByFolder = allArticles.reduce(
-  (acc, article) => {
-    const folder = article.folder || 'root';
-    if (!acc[folder]) {
-      acc[folder] = [];
-    }
-    acc[folder].push(article);
-    return acc;
-  },
-  {} as Record<string, typeof allArticles>,
-);
+const folderGroups = groupArticlesByFolder(allArticles);
 ---
 
 <aside
@@ -48,7 +32,7 @@ const articlesByFolder = allArticles.reduce(
 >
   <div class="py-6 px-6">
     <nav class="space-y-2">
-      {Object.entries(articlesByFolder).map(([folder, articles]) => (
+      {folderGroups.map(({ folder, articles }) => (
         <details open class="mb-4 group">
           <summary class="flex w-full items-center justify-between py-2 text-sm font-medium text-sidebar-foreground hover:text-sidebar-foreground/80 transition-colors cursor-pointer list-none [&::-webkit-details-marker]:hidden">
             {formatFolderName(folder)}

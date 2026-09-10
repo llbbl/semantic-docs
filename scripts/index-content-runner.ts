@@ -15,6 +15,8 @@ export interface IndexingOperations {
   indexContent: (onProgress: IndexProgress) => Promise<IndexingResult>;
   /** Repopulate the keyword index from the rows just written. */
   rebuildKeywordIndex?: () => Promise<void>;
+  /** Persist frontmatter fields the library parses but discards. Returns rows updated. */
+  applyNavFrontmatter?: () => Promise<number>;
 }
 
 export interface IndexingLogger {
@@ -38,6 +40,13 @@ export async function runContentIndexing(
     const result = await operations.indexContent((current, total, file) => {
       logger.info(`[${current}/${total}] Indexing: ${file}`);
     });
+
+    // After the vector rows land, because indexContent clears and reinserts the
+    // table and would otherwise discard these values.
+    if (operations.applyNavFrontmatter) {
+      const updated = await operations.applyNavFrontmatter();
+      logger.info(`Applied navigation frontmatter to ${updated} documents`);
+    }
 
     // After the vector rows land, so a failed embedding run never leaves a
     // keyword index describing content that is not in the articles table.

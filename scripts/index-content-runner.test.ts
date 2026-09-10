@@ -126,4 +126,58 @@ describe('runContentIndexing', () => {
     expect(await runContentIndexing(operations, logger)).toBe(1);
     expect(rebuildKeywordIndex).not.toHaveBeenCalled();
   });
+
+  it('applies navigation frontmatter after the rows are written', async () => {
+    const order: string[] = [];
+    const logger = createLogger();
+    const operations: IndexingOperations = {
+      createTable: vi.fn().mockResolvedValue(undefined),
+      indexContent: vi.fn(async () => {
+        order.push('indexContent');
+        return { success: 1, total: 1, failed: 0 };
+      }),
+      applyNavFrontmatter: vi.fn(async () => {
+        order.push('applyNavFrontmatter');
+        return 3;
+      }),
+    };
+
+    expect(await runContentIndexing(operations, logger)).toBe(0);
+    // indexContent clears and reinserts the table, so an earlier pass would be
+    // overwritten.
+    expect(order).toEqual(['indexContent', 'applyNavFrontmatter']);
+    expect(logger.info).toHaveBeenCalledWith(
+      'Applied navigation frontmatter to 3 documents',
+    );
+  });
+
+  it('skips the frontmatter pass when no operation is supplied', async () => {
+    const logger = createLogger();
+    const operations: IndexingOperations = {
+      createTable: vi.fn().mockResolvedValue(undefined),
+      indexContent: vi.fn().mockResolvedValue({
+        success: 1,
+        total: 1,
+        failed: 0,
+      }),
+    };
+
+    expect(await runContentIndexing(operations, logger)).toBe(0);
+    expect(logger.info).not.toHaveBeenCalledWith(
+      expect.stringContaining('navigation frontmatter'),
+    );
+  });
+
+  it('does not apply frontmatter when indexing throws', async () => {
+    const logger = createLogger();
+    const applyNavFrontmatter = vi.fn();
+    const operations: IndexingOperations = {
+      createTable: vi.fn().mockResolvedValue(undefined),
+      indexContent: vi.fn().mockRejectedValue(new Error('embedding failed')),
+      applyNavFrontmatter,
+    };
+
+    expect(await runContentIndexing(operations, logger)).toBe(1);
+    expect(applyNavFrontmatter).not.toHaveBeenCalled();
+  });
 });

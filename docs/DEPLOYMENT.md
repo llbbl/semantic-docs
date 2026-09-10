@@ -100,6 +100,13 @@ After upgrading, confirm the index is populated rather than assuming it:
 SELECT count(*) FROM articles_cf_bgem3_1024_fts;
 ```
 
+Sidebar ordering adds two columns, `sort_order` and `description`. Both
+`pnpm db:init` and `pnpm index` add them to an existing table, so upgrading
+needs no separate migration; existing rows are preserved and the values are
+filled in on the next `pnpm index`. Rendering reads these columns, so a
+deployment serving pages from a database that has never run either command
+fails with `no such column: sort_order` rather than quietly dropping the order.
+
 ## Containers
 
 Two Dockerfiles are provided. Both index content during the build, and indexing
