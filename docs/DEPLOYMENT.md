@@ -64,6 +64,11 @@ CLOUDFLARE_ACCOUNT_ID=your-account-id
 CLOUDFLARE_API_TOKEN=your-api-token
 ```
 
+Leave `OFFLINE_EMBEDDINGS_BASE_URL` unset in production. It swaps in a
+deterministic local embedding service for CI and credential-free development,
+and points indexing and search at `articles_offline_hash_1024` instead — a
+different embedding space, and not a real model.
+
 ## Upgrade Note
 
 The current default index is `articles_cf_bgem3_1024`. Earlier releases embedded

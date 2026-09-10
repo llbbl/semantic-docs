@@ -31,9 +31,9 @@ if (!url || !authToken) {
 
 // Checked before any database work so missing credentials fail immediately
 // rather than after the table has been created.
-if (!env.hasCloudflareCredentials) {
+if (!env.hasEmbeddingProvider) {
   logger.error(
-    'Workers AI credentials are required to index content. Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN (see .env.example).',
+    'No embedding provider configured. Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN, or OFFLINE_EMBEDDINGS_BASE_URL for a credential-free local service (see .env.example).',
   );
   process.exit(1);
 }

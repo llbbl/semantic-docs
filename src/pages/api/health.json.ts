@@ -38,7 +38,7 @@ async function isDatabaseReady(): Promise<boolean> {
 
 export const GET: APIRoute = async () => {
   const database = await isDatabaseReady();
-  const embeddings = env.hasCloudflareCredentials;
+  const embeddings = env.hasEmbeddingProvider;
   const healthy = database && embeddings;
 
   return new Response(

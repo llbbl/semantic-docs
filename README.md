@@ -41,6 +41,23 @@ libSQL/Turso database, switch to the `.env`-driven commands in the docs.
 
 Text you index and every search query are sent to Cloudflare.
 
+### Without credentials
+
+To run the whole pipeline with no accounts at all, start the bundled offline
+embedding service in a second terminal and point the app at it:
+
+```bash
+pnpm embeddings:offline
+OFFLINE_EMBEDDINGS_BASE_URL=http://127.0.0.1:8788/v1 pnpm db:init:local
+OFFLINE_EMBEDDINGS_BASE_URL=http://127.0.0.1:8788/v1 pnpm index:local
+OFFLINE_EMBEDDINGS_BASE_URL=http://127.0.0.1:8788/v1 pnpm dev
+```
+
+This is what CI uses, so fork and Dependabot pull requests exercise indexing,
+prerendering, and search. Its vectors are a hashed bag of words rather than a
+model, and live in their own table — good enough to prove the pipeline runs, and
+not a basis for judging search quality.
+
 ## Documentation
 
 - [Docs index](./docs/README.md)
