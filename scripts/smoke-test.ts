@@ -88,13 +88,15 @@ async function checkHealth(): Promise<void> {
 async function checkSearch(): Promise<void> {
   // Presence, not rank. Under the offline provider the vectors carry no
   // semantics, so ordering is not a property worth asserting; that the indexed
-  // article comes back at all is what proves the round trip.
+  // article comes back at all is what proves the round trip. The limit is the
+  // API maximum so the check does not quietly become a rank assertion, and so a
+  // coin flip, once the corpus grows past a handful of articles.
   const query = 'semantic search embeddings';
   const expectedSlug = 'features/semantic-search';
   const response = await fetch(`${BASE_URL}/api/search.json`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, limit: 5 }),
+    body: JSON.stringify({ query, limit: 20 }),
   });
 
   if (response.status !== 200) {
@@ -143,6 +145,11 @@ async function main(): Promise<void> {
     if (code !== 0 && code !== null) {
       logger.error(`Server exited early with code ${code}`);
     }
+    exited.abort();
+  });
+  // An unhandled 'error' event throws instead of producing a FAIL line.
+  server.on('error', (error) => {
+    check('server process starts', false, String(error));
     exited.abort();
   });
 

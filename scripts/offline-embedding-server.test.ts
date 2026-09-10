@@ -1,5 +1,20 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createEmbeddingHandler, embedText } from './offline-embedding-server';
+/**
+ * @vitest-environment node
+ */
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+import {
+  createEmbeddingHandler,
+  embedText,
+  startOfflineEmbeddingServer,
+} from './offline-embedding-server';
 
 const DIMENSIONS = 1024;
 
@@ -98,5 +113,87 @@ describe('createEmbeddingHandler', () => {
     ['zero dimensions', JSON.stringify({ input: ['a'], dimensions: 0 })],
   ])('rejects %s', (_label, body) => {
     expect(handle(body).status).toBe(400);
+  });
+});
+
+describe('startOfflineEmbeddingServer', () => {
+  let server: ReturnType<typeof startOfflineEmbeddingServer>;
+  let baseUrl: string;
+
+  beforeAll(async () => {
+    // Port 0 so parallel runs cannot collide on a fixed port.
+    server = startOfflineEmbeddingServer(0);
+    await new Promise<void>((resolve) => server.on('listening', resolve));
+    const address = server.address();
+    if (address === null || typeof address === 'string') {
+      throw new Error('server did not bind a TCP port');
+    }
+    baseUrl = `http://127.0.0.1:${address.port}`;
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it('binds loopback only', () => {
+    const address = server.address();
+    expect(address).toMatchObject({ address: '127.0.0.1' });
+  });
+
+  it('answers the health probe', async () => {
+    const response = await fetch(`${baseUrl}/health`);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ status: 'ok' });
+  });
+
+  it('serves the embeddings path under any base prefix', async () => {
+    const response = await fetch(`${baseUrl}/v1/embeddings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input: ['a', 'b'], dimensions: DIMENSIONS }),
+    });
+    const body = (await response.json()) as {
+      data: Array<{ index: number; embedding: number[] }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.data.map((item) => item.index)).toEqual([0, 1]);
+    expect(body.data[0].embedding).toHaveLength(DIMENSIONS);
+  });
+
+  it.each([
+    ['GET', '/v1/embeddings'],
+    ['POST', '/v1/nope'],
+  ])('404s %s %s', async (method, path) => {
+    const response = await fetch(`${baseUrl}${path}`, { method });
+
+    expect(response.status).toBe(404);
+  });
+
+  // An unbounded width reached new Array() and killed the process, which
+  // surfaced only as a connection error partway through indexing.
+  it('rejects an absurd width instead of dying', async () => {
+    const response = await fetch(`${baseUrl}/v1/embeddings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input: ['a'], dimensions: 2 ** 32 }),
+    });
+
+    expect(response.status).toBe(400);
+
+    const stillAlive = await fetch(`${baseUrl}/health`);
+    expect(stillAlive.status).toBe(200);
+  });
+
+  it('survives a malformed body', async () => {
+    const response = await fetch(`${baseUrl}/v1/embeddings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: 'not json',
+    });
+
+    expect(response.status).toBe(400);
+    expect((await fetch(`${baseUrl}/health`)).status).toBe(200);
   });
 });

@@ -6,15 +6,13 @@ on:
   pull_request:
     branches: [ main, dev ]
 
+env:
+  OFFLINE_EMBEDDINGS_PORT: '8788'
+
 jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    env:
-      # Deterministic local embeddings, so indexing, prerendering and search run
-      # identically for fork and Dependabot PRs, which never receive secrets.
-      OFFLINE_EMBEDDINGS_BASE_URL: http://127.0.0.1:8788/v1
-      OFFLINE_EMBEDDINGS_PORT: '8788'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,6 +29,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      # Deliberately without OFFLINE_EMBEDDINGS_BASE_URL: the unit suite asserts
+      # the Workers AI branch, and that variable switches provider and table.
       - name: Run tests with coverage
         run: pnpm test:coverage --run
 
@@ -39,23 +39,33 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
+      # Deterministic local embeddings from here down, so indexing, prerendering
+      # and search run identically for fork and Dependabot PRs, which never
+      # receive secrets.
       - name: Start offline embedding service
         run: |
-          pnpm embeddings:offline &
+          pnpm embeddings:offline > /tmp/offline-embeddings.log 2>&1 &
           for _ in $(seq 1 40); do
             curl -sf "http://127.0.0.1:${OFFLINE_EMBEDDINGS_PORT}/health" >/dev/null && exit 0
             sleep 0.25
           done
           echo "offline embedding service did not start" >&2
+          cat /tmp/offline-embeddings.log >&2
           exit 1
 
       - name: Initialize local database
+        env:
+          OFFLINE_EMBEDDINGS_BASE_URL: http://127.0.0.1:8788/v1
         run: pnpm db:init:local
 
       - name: Index content to local database
+        env:
+          OFFLINE_EMBEDDINGS_BASE_URL: http://127.0.0.1:8788/v1
         run: pnpm index:local
 
       - name: Build
+        env:
+          OFFLINE_EMBEDDINGS_BASE_URL: http://127.0.0.1:8788/v1
         run: pnpm build
 
       # Exercises the built output: prerendered article pages, the health check,
@@ -63,4 +73,10 @@ jobs:
       # suite mocks all of this, so a dependency bump that breaks rendering or
       # search is invisible without it.
       - name: Smoke test the built server
+        env:
+          OFFLINE_EMBEDDINGS_BASE_URL: http://127.0.0.1:8788/v1
         run: pnpm smoke
+
+      - name: Offline embedding service log
+        if: failure()
+        run: cat /tmp/offline-embeddings.log || true

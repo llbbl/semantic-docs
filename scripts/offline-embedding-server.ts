@@ -12,11 +12,15 @@
  * retrieval quality.
  */
 
-import { createServer } from 'node:http';
+import { createServer, type IncomingMessage } from 'node:http';
 import { logger } from 'logan-logger';
 import { EMBEDDING_DIMENSIONS } from '../src/lib/searchConfig';
 
 const DEFAULT_PORT = 8788;
+
+// Comfortably above any embedding width in use; the cap exists to bound the
+// allocation a request can ask for, not to describe a real model.
+const MAX_DIMENSIONS = 8192;
 
 /** FNV-1a. Chosen for being short and stable across runs, not for quality. */
 function hashToken(token: string): number {
@@ -34,10 +38,10 @@ export function embedText(text: string, dimensions: number): number[] {
 
   for (const token of tokens) {
     const hash = hashToken(token);
-    // The low bit picks a sign so that unrelated tokens can cancel rather than
-    // only ever accumulating, which keeps unrelated documents from drifting
-    // toward a single dense vector.
-    vector[hash % dimensions] += hash & 1 ? 1 : -1;
+    // The sign comes from the high bit because the bucket consumes the low
+    // ones: with a power-of-two width, a low-bit sign is fixed per bucket and
+    // every cosine stays positive, so unrelated documents never separate.
+    vector[hash % dimensions] += (hash >>> 31) & 1 ? 1 : -1;
   }
 
   const magnitude = Math.sqrt(vector.reduce((sum, v) => sum + v * v, 0));
@@ -91,8 +95,16 @@ export function createEmbeddingHandler(defaultDimensions: number) {
         ? body.dimensions
         : defaultDimensions;
 
-    if (dimensions < 1) {
-      return { status: 400, payload: { error: 'dimensions must be positive' } };
+    // Bounded before it reaches `new Array()`: an unbounded value either throws
+    // RangeError or allocates until the process dies, and this handler runs
+    // inside a request callback where either would take the service down.
+    if (dimensions < 1 || dimensions > MAX_DIMENSIONS) {
+      return {
+        status: 400,
+        payload: {
+          error: `dimensions must be between 1 and ${MAX_DIMENSIONS}`,
+        },
+      };
     }
 
     return {
@@ -113,7 +125,7 @@ export function createEmbeddingHandler(defaultDimensions: number) {
 }
 
 function readBody(
-  stream: NodeJS.ReadableStream,
+  stream: IncomingMessage,
   limitBytes: number,
 ): Promise<string | null> {
   return new Promise((resolve) => {
@@ -122,6 +134,9 @@ function readBody(
     stream.on('data', (chunk: Buffer) => {
       size += chunk.length;
       if (size > limitBytes) {
+        // Stop the sender rather than letting it keep uploading into a response
+        // that has already been ended.
+        stream.destroy();
         resolve(null);
         return;
       }
@@ -154,17 +169,27 @@ export function startOfflineEmbeddingServer(port: number) {
       return;
     }
 
-    void readBody(req, MAX_BODY_BYTES).then((rawBody) => {
-      if (rawBody === null) {
-        res.writeHead(413, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'request body too large' }));
-        return;
-      }
+    void readBody(req, MAX_BODY_BYTES)
+      .then((rawBody) => {
+        if (rawBody === null) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'request body too large' }));
+          return;
+        }
 
-      const { status, payload } = handle(rawBody);
-      res.writeHead(status, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(payload));
-    });
+        const { status, payload } = handle(rawBody);
+        res.writeHead(status, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(payload));
+      })
+      // Without this a throw here is an unhandled rejection that ends the
+      // process, surfacing much later as a connection error during indexing.
+      .catch((error: unknown) => {
+        logger.error('Offline embedding request failed', error);
+        if (!res.headersSent) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+        }
+        res.end(JSON.stringify({ error: 'internal error' }));
+      });
   });
 
   // Loopback only. This service authenticates nothing and must not be
