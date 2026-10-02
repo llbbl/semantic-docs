@@ -54,7 +54,7 @@
     "@radix-ui/react-dialog": "^1.1.23",
     "@shikijs/langs": "^4.4.3",
     "@tailwindcss/vite": "^4.3.3",
-    "astro": "^7.2.10",
+    "astro": "^7.3.5",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "gray-matter": "^4.0.3",
