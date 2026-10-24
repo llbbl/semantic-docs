@@ -170,7 +170,7 @@ export default function Search({
         acc[result.folder].push(result);
         return acc;
       },
-      {} as Record<string, SearchResult[]>,
+      Object.create(null) as Record<string, SearchResult[]>,
     );
   }, [results]);
 
