@@ -20,7 +20,7 @@
 FROM node:22-slim AS builder
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@11.23.0 --activate
+RUN corepack enable && corepack prepare pnpm@12.15.0 --activate
 
 # Set working directory
 WORKDIR /app
@@ -60,7 +60,7 @@ RUN --mount=type=secret,id=turso_db_url,required=true \
 FROM node:22-slim AS runtime
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@11.23.0 --activate
+RUN corepack enable && corepack prepare pnpm@12.15.0 --activate
 
 # Set working directory
 WORKDIR /app
