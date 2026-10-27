@@ -19,7 +19,7 @@ Use it when you want:
 
 ## Quick Start
 
-Requires Node.js `>=22.13.0` and pnpm `11`.
+Requires Node.js `>=22.13.0` and pnpm `12.15.0`.
 
 ```bash
 git clone https://github.com/llbbl/semantic-docs.git

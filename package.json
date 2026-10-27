@@ -14,7 +14,7 @@
   ],
   "author": "llbbl",
   "license": "MIT",
-  "packageManager": "pnpm@11.23.0",
+  "packageManager": "pnpm@12.15.0",
   "engines": {
     "node": ">=22.13.0"
   },
