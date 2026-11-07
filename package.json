@@ -1,6 +1,6 @@
 {
   "name": "semantic-docs",
-  "version": "2.6.6",
+  "version": "2.6.7",
   "description": "Documentation theme with semantic vector search powered by libsql-search",
   "type": "module",
   "keywords": [
@@ -14,7 +14,7 @@
   ],
   "author": "llbbl",
   "license": "MIT",
-  "packageManager": "pnpm@11.23.0",
+  "packageManager": "pnpm@12.15.0",
   "engines": {
     "node": ">=22.13.0"
   },
