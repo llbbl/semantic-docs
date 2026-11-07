@@ -129,7 +129,6 @@ const CommandDialog = ({ children, ...props }: DialogProps) => {
 };
 
 export {
-  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,

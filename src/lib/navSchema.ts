@@ -10,10 +10,10 @@
 import type { Client } from '@libsql/client';
 
 /** Column added for frontmatter `order`; `order` itself is a SQL keyword. */
-export const NAV_ORDER_COLUMN = 'sort_order';
+const NAV_ORDER_COLUMN = 'sort_order';
 
 /** Column added for frontmatter `description`. */
-export const NAV_DESCRIPTION_COLUMN = 'description';
+const NAV_DESCRIPTION_COLUMN = 'description';
 
 const NAV_COLUMNS: ReadonlyArray<{ name: string; type: string }> = [
   { name: NAV_ORDER_COLUMN, type: 'INTEGER' },
