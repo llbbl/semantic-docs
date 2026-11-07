@@ -59,7 +59,7 @@
     "cmdk": "^1.1.1",
     "gray-matter": "^4.0.3",
     "logan-logger": "^2.5.3",
-    "lucide-react": "^1.57.0",
+    "lucide-react": "^1.61.0",
     "marked": "^18.1.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
