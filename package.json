@@ -1,6 +1,6 @@
 {
   "name": "semantic-docs",
-  "version": "2.6.6",
+  "version": "2.6.12",
   "description": "Documentation theme with semantic vector search powered by libsql-search",
   "type": "module",
   "keywords": [
@@ -14,9 +14,9 @@
   ],
   "author": "llbbl",
   "license": "MIT",
-  "packageManager": "pnpm@11.23.0",
+  "packageManager": "pnpm@12.15.0",
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=22.22.0"
   },
   "repository": {
     "type": "git",
@@ -59,11 +59,11 @@
     "cmdk": "^1.1.1",
     "gray-matter": "^4.0.3",
     "logan-logger": "^2.5.3",
-    "lucide-react": "^1.57.0",
+    "lucide-react": "^1.61.0",
     "marked": "^18.1.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "sanitize-html": "^2.18.0",
+    "sanitize-html": "^2.18.1",
     "shiki": "^4.5.0",
     "tailwind-merge": "^3.7.0",
     "tailwindcss": "^4.3.3"
@@ -80,7 +80,7 @@
     "@vitest/browser": "^4.1.11",
     "@vitest/coverage-v8": "^4.1.11",
     "@vitest/ui": "^4.1.11",
-    "happy-dom": "^20.14.6",
+    "happy-dom": "^21.0.4",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
