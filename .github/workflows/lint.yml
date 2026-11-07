@@ -31,3 +31,6 @@ jobs:
 
       - name: Run Biome linter
         run: pnpm lint
+
+      - name: Audit unused exports
+        run: pnpm audit:exports
