@@ -40,6 +40,7 @@
     "test:coverage": "vitest --coverage",
     "uncov": "uncov",
     "uncov:check": "uncov check",
+    "audit:exports": "knip",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
@@ -81,6 +82,7 @@
     "@vitest/coverage-v8": "^5.1.0",
     "@vitest/ui": "^5.1.0",
     "happy-dom": "^21.0.4",
+    "knip": "6.44.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"
