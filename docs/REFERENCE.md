@@ -103,8 +103,9 @@ pnpm test
 
 Run `pnpm audit:exports` to review Knip’s unused files, exports, and types. The
 scan covers `src/`, TypeScript scripts, and root config files. Astro routes,
-Vitest tests, and package scripts count as entry points. The local audit returns
-a nonzero status when it finds candidates. Review each result before editing code.
+Vitest tests, and package scripts count as entry points. The audit also
+runs in CI and fails the lint job when it finds candidates. Review each result
+before editing code.
 
 Releases are driven from conventional commits on `main` via GitHub Actions.
 
