@@ -13,7 +13,7 @@ interface RateLimitEntry {
 const DEFAULT_MAX_ENTRIES = 10_000;
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 
-export type TrustedProxyHeader = 'x-real-ip' | 'x-forwarded-for';
+type TrustedProxyHeader = 'x-real-ip' | 'x-forwarded-for';
 
 export interface RateLimitConfig {
   /** Maximum requests per window */

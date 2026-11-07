@@ -10,7 +10,7 @@ import { folderOrder } from '@/config/nav';
 import type { ArticleNavSummary, ArticleNeighbors } from '@/types/article';
 
 /** Folder assigned to articles stored at the top level of ./content. */
-export const ROOT_FOLDER = 'root';
+const ROOT_FOLDER = 'root';
 
 export interface FolderGroup {
   folder: string;

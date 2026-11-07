@@ -1,14 +1,10 @@
-export interface IndexingResult {
+interface IndexingResult {
   success: number;
   total: number;
   failed: number;
 }
 
-export type IndexProgress = (
-  current: number,
-  total: number,
-  file: string,
-) => void;
+type IndexProgress = (current: number, total: number, file: string) => void;
 
 export interface IndexingOperations {
   createTable: () => Promise<unknown>;
