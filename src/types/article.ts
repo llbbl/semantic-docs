@@ -5,6 +5,8 @@
 
 /**
  * Full article with all fields including content
+ *
+ * @public
  */
 export interface Article {
   id: number;
@@ -19,6 +21,8 @@ export interface Article {
 
 /**
  * Article summary without content (for lists/sidebar)
+ *
+ * @public
  */
 export interface ArticleSummary {
   id: number;
@@ -52,6 +56,8 @@ export interface ArticleNeighbors {
 
 /**
  * Search result with distance score
+ *
+ * @public
  */
 export interface ArticleSearchResult {
   id: number;
