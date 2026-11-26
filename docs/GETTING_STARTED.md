@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Node.js `>=22.22.0`
+- Node.js `>=22.23.4`
 - pnpm `12.15.0`
 - A Cloudflare account with Workers AI access, for embeddings
 
