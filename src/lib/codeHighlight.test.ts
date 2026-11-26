@@ -1,3 +1,5 @@
+/** @vitest-environment node */
+
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { logger } from 'logan-logger';

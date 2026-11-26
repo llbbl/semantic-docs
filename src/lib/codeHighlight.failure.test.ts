@@ -1,4 +1,6 @@
 /**
+ * @vitest-environment node
+ *
  * Isolated because it mocks the Shiki core module, which the highlighter
  * singleton in codeHighlight.ts resolves once per module instance.
  */
